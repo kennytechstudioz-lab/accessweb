@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #e53e3e;
+  --primary-hover: #c53030;
+  --secondary: #121824;
+  --accent: #e53e3e;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  
+  --header-bg: #121824;
+  --header-fg: #f1f5f9;
+  
+  --nav-bg: #ffffff;
+  --nav-fg: #0f172a;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-background-custom: var(--background);
+  --color-foreground-custom: var(--foreground);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-header-bg: var(--header-bg);
+  --color-header-fg: var(--header-fg);
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-fg: var(--nav-fg);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom slanting style matching the MetroBank image */
+.slant-bg {
+  background: var(--primary);
+  position: relative;
+}
+
+.slant-bg::after {
+  content: "";
+  position: absolute;
+  right: -20px;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  background: var(--primary);
+  transform: skewX(-20deg);
+  z-index: 1;
+}
+
+/* Smooth sticky transition */
+.sticky-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+/* Custom dashboard scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
