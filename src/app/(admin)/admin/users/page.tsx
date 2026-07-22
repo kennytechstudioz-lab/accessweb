@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  UserCheck
+  UserCheck,
+  FileText
 } from 'lucide-react';
 import { useUsersStore } from '@/store/usersStore';
 import { useToastStore } from '@/store/toastStore';
@@ -49,22 +50,26 @@ export default function UsersAdminPage() {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [submittingTx, setSubmittingTx] = useState(false);
 
-  // Bulk Email Modal state
+  // Bulk Email Modal & DB Templates state
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [dbEmailTemplates, setDbEmailTemplates] = useState<any[]>([]);
+  const [loadingDbEmails, setLoadingDbEmails] = useState(false);
+  const [selectedEmailTplId, setSelectedEmailTplId] = useState<string>('');
   const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
   const [emailForm, setEmailForm] = useState({
-    template: 'welcome',
-    subject: 'Welcome to Access National Bank - Account Clearance',
-    content: 'Dear Valued Client,\n\nYour online banking vault has been fully initialized and activated. You can now access multi-currency transfers and real-time ledger services.\n\nBest Regards,\nAccess National Bank Administration',
+    subject: '',
+    content: '',
   });
 
-  // Bulk Notification Modal state
+  // Bulk Notification Modal & DB Templates state
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [dbNotifTemplates, setDbNotifTemplates] = useState<any[]>([]);
+  const [loadingDbNotifs, setLoadingDbNotifs] = useState(false);
+  const [selectedNotifTplId, setSelectedNotifTplId] = useState<string>('');
   const [sendingBulkNotif, setSendingBulkNotif] = useState(false);
   const [notifForm, setNotifForm] = useState({
-    template: 'security',
-    title: 'Account Security Clearance Notice',
-    message: 'Important security update: Please verify your contact details and review active ledger authorizations.',
+    title: '',
+    message: '',
   });
 
   const [txForm, setTxForm] = useState({
@@ -146,6 +151,115 @@ export default function UsersAdminPage() {
     } else {
       setSelectedUserIds([...selectedUserIds, id]);
     }
+  };
+
+  // Open Email Modal & Fetch Email Templates from DB
+  const handleOpenEmailModal = async () => {
+    setIsEmailModalOpen(true);
+    setLoadingDbEmails(true);
+    try {
+      const data = await api.get('/admin/emails');
+      const templatesList = data.templates || data || [];
+      
+      // Built-in fallbacks if DB returns empty
+      const defaultTemplates = [
+        {
+          _id: 'default-welcome',
+          name: 'Welcome & Account Clearance',
+          title: 'Welcome to Access National Bank - Account Clearance',
+          content: 'Dear Valued Client,\n\nYour online banking vault has been fully initialized and activated. You can now access multi-currency transfers and real-time ledger services.\n\nBest Regards,\nAccess National Bank Administration',
+        },
+        {
+          _id: 'default-kyc',
+          name: 'KYC Document Audit Notice',
+          title: 'Identity Verification Clearance Required',
+          content: 'Dear Client,\n\nTo ensure uninterrupted international transfers, please upload your identity clearance documentation under your dashboard KYC settings.\n\nAccess National Audit Desk',
+        },
+        {
+          _id: 'default-security',
+          name: 'Security Clearance Notice',
+          title: 'Security Alert - Vault Auth Clearance',
+          content: 'Dear Client,\n\nWe detected a routine security audit check on your vault. Please review your active authorizations and contact support if you notice unfamiliar activity.\n\nSecurity Audit Bureau',
+        },
+      ];
+
+      const finalList = templatesList.length > 0 ? templatesList : defaultTemplates;
+      setDbEmailTemplates(finalList);
+
+      if (finalList.length > 0) {
+        setSelectedEmailTplId(finalList[0]._id);
+        setEmailForm({
+          subject: finalList[0].title || finalList[0].name,
+          content: finalList[0].content,
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching email templates:', e);
+    } finally {
+      setLoadingDbEmails(false);
+    }
+  };
+
+  // Open Notification Modal & Fetch Notification Templates from DB
+  const handleOpenNotifModal = async () => {
+    setIsNotifModalOpen(true);
+    setLoadingDbNotifs(true);
+    try {
+      const data = await api.get('/admin/notification-templates');
+      const templatesList = data.templates || data || [];
+      
+      const defaultNotifTemplates = [
+        {
+          _id: 'default-sec-notif',
+          name: 'Security Alert',
+          title: 'Account Security Clearance Notice',
+          content: 'Important security update: Please verify your contact details and review active ledger authorizations.',
+        },
+        {
+          _id: 'default-kyc-notif',
+          name: 'KYC Audit Reminder',
+          title: 'KYC Document Audit Reminder',
+          content: 'Your identity verification documents are pending review. Upload valid clearance files to clear wire transfers.',
+        },
+        {
+          _id: 'default-maint-notif',
+          name: 'System Maintenance',
+          title: 'System Maintenance Announcement',
+          content: 'Scheduled system ledger upgrades will take place this weekend. Banking vaults remain fully secure.',
+        },
+      ];
+
+      const finalList = templatesList.length > 0 ? templatesList : defaultNotifTemplates;
+      setDbNotifTemplates(finalList);
+
+      if (finalList.length > 0) {
+        setSelectedNotifTplId(finalList[0]._id);
+        setNotifForm({
+          title: finalList[0].title || finalList[0].name,
+          message: finalList[0].content,
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching notification templates:', e);
+    } finally {
+      setLoadingDbNotifs(false);
+    }
+  };
+
+  const handleSelectEmailTemplate = (tpl: any) => {
+    setSelectedEmailTplId(tpl._id);
+    setEmailForm({
+      subject: tpl.title || tpl.name,
+      content: tpl.content || '',
+    });
+  };
+
+  const handleSelectNotifTemplate = (tpl: any) => {
+    setSelectedNotifTplId(tpl._id);
+    setNotifForm({
+      title: tpl.title || tpl.name,
+      message: tpl.content || '',
+    });
   };
 
   const handleStartEdit = async (user: any) => {
@@ -322,70 +436,6 @@ export default function UsersAdminPage() {
     }
   };
 
-  // Preset Email Template Selection
-  const handleEmailTemplateChange = (templateKey: string) => {
-    if (templateKey === 'welcome') {
-      setEmailForm({
-        template: 'welcome',
-        subject: 'Welcome to Access National Bank - Account Clearance',
-        content: 'Dear Valued Client,\n\nYour online banking vault has been fully initialized and activated. You can now access multi-currency transfers and real-time ledger services.\n\nBest Regards,\nAccess National Bank Administration',
-      });
-    } else if (templateKey === 'kyc') {
-      setEmailForm({
-        template: 'kyc',
-        subject: 'Identity Verification Clearance Required',
-        content: 'Dear Client,\n\nTo ensure uninterrupted international transfers, please upload your identity clearance documentation under your dashboard KYC settings.\n\nAccess National Audit Desk',
-      });
-    } else if (templateKey === 'security') {
-      setEmailForm({
-        template: 'security',
-        subject: 'Security Alert - Vault Auth Clearance',
-        content: 'Dear Client,\n\nWe detected a routine security audit check on your vault. Please review your active authorizations and contact support if you notice unfamiliar activity.\n\nSecurity Audit Bureau',
-      });
-    } else if (templateKey === 'statement') {
-      setEmailForm({
-        template: 'statement',
-        subject: 'Monthly Ledger Statement Notice',
-        content: 'Dear Client,\n\nYour monthly account transaction statement and ledger summaries are now available for review inside your secure portal.\n\nAccess National Accounting',
-      });
-    } else {
-      setEmailForm({
-        template: 'custom',
-        subject: '',
-        content: '',
-      });
-    }
-  };
-
-  // Preset Notification Template Selection
-  const handleNotifTemplateChange = (templateKey: string) => {
-    if (templateKey === 'security') {
-      setNotifForm({
-        template: 'security',
-        title: 'Account Security Clearance Notice',
-        message: 'Important security update: Please verify your contact details and review active ledger authorizations.',
-      });
-    } else if (templateKey === 'kyc') {
-      setNotifForm({
-        template: 'kyc',
-        title: 'KYC Document Audit Reminder',
-        message: 'Your identity verification documents are pending review. Upload valid clearance files to clear wire transfers.',
-      });
-    } else if (templateKey === 'maintenance') {
-      setNotifForm({
-        template: 'maintenance',
-        title: 'System Maintenance Announcement',
-        message: 'Scheduled system ledger upgrades will take place this weekend. Banking vaults remain fully secure.',
-      });
-    } else {
-      setNotifForm({
-        template: 'custom',
-        title: '',
-        message: '',
-      });
-    }
-  };
-
   // Submit Bulk Email
   const handleSendBulkEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -395,13 +445,13 @@ export default function UsersAdminPage() {
       const targetUsers = users.filter((u) => selectedUserIds.includes(u._id));
       for (const u of targetUsers) {
         await api.post('/admin/notifications', {
-          title: `[EMAIL SENT] ${emailForm.subject}`,
+          title: `[EMAIL DISPATCH] ${emailForm.subject}`,
           message: emailForm.content,
           target: u.username,
         }).catch(() => {});
       }
 
-      showToast(`Email successfully dispatched to ${targetUsers.length} selected users.`, 'success');
+      showToast(`Email template dispatched to ${targetUsers.length} selected users.`, 'success');
       setIsEmailModalOpen(false);
       setSelectedUserIds([]);
     } catch (err: any) {
@@ -426,7 +476,7 @@ export default function UsersAdminPage() {
         });
       }
 
-      showToast(`Notification broadcasted to ${targetUsers.length} selected users.`, 'success');
+      showToast(`Notification template broadcasted to ${targetUsers.length} selected users.`, 'success');
       setIsNotifModalOpen(false);
       setSelectedUserIds([]);
     } catch (err: any) {
@@ -643,55 +693,55 @@ export default function UsersAdminPage() {
         )}
       </div>
 
-      {/* Floating Bulk Options Bar */}
+      {/* Floating Bulk Options Bar (Icons Only as Requested) */}
       {selectedUserIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-6 max-w-2xl w-[92%] animate-slideUp">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-6 animate-slideUp">
           <div className="flex items-center gap-2 font-mono text-xs">
             <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px]">
               {selectedUserIds.length}
             </span>
-            <span className="font-bold">Clients Selected</span>
+            <span className="font-bold hidden sm:inline">Selected</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
-              onClick={() => setIsEmailModalOpen(true)}
-              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              onClick={handleOpenEmailModal}
+              className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-red-400 hover:text-white rounded-xl transition-all cursor-pointer shadow flex items-center justify-center"
+              title="Send Email to Selected Users"
             >
-              <Mail size={14} className="text-red-400" />
-              <span>Send Email</span>
+              <Mail size={18} />
             </button>
 
             <button
-              onClick={() => setIsNotifModalOpen(true)}
-              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+              onClick={handleOpenNotifModal}
+              className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 hover:text-white rounded-xl transition-all cursor-pointer shadow flex items-center justify-center"
+              title="Send Notification to Selected Users"
             >
-              <Bell size={14} className="text-amber-400" />
-              <span>Send Notification</span>
+              <Bell size={18} />
             </button>
 
             <button
               onClick={handleBulkDelete}
-              className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-red-900/40"
+              className="p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all cursor-pointer shadow-lg shadow-red-900/40 flex items-center justify-center"
+              title="Delete Selected Users"
             >
-              <Trash2 size={14} />
-              <span>Delete</span>
+              <Trash2 size={18} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Bulk Send Email Modal Dialog */}
+      {/* Bulk Send Email Modal Dialog (Lists DB Templates) */}
       {isEmailModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-slideIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-slideIn">
             
             {/* Header */}
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Mail size={18} className="text-primary" />
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Bulk Email Dispatch ({selectedUserIds.length} Recipients)
+                  Select Email Template ({selectedUserIds.length} Recipients)
                 </h3>
               </div>
               <button
@@ -702,25 +752,49 @@ export default function UsersAdminPage() {
               </button>
             </div>
 
-            {/* Form */}
+            {/* Form & DB Templates List */}
             <form onSubmit={handleSendBulkEmail}>
-              <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+              <div className="p-6 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
                 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Select Email Template</label>
-                  <select
-                    value={emailForm.template}
-                    onChange={(e) => handleEmailTemplateChange(e.target.value)}
-                    className="border border-slate-200 rounded px-3 py-2 text-xs bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-primary"
-                  >
-                    <option value="welcome">Welcome & Account Clearance</option>
-                    <option value="kyc">KYC Verification Clearance Request</option>
-                    <option value="security">Vault Security Alert Notice</option>
-                    <option value="statement">Monthly Account Audit & Statement</option>
-                    <option value="custom">Custom Email Template</option>
-                  </select>
+                {/* DB Email Templates Cards Selection */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-extrabold text-slate-550 uppercase tracking-wider flex items-center justify-between">
+                    <span>Database Email Templates</span>
+                    {loadingDbEmails && <span className="text-primary animate-pulse">Loading templates...</span>}
+                  </label>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {dbEmailTemplates.map((tpl) => {
+                      const isSelected = selectedEmailTplId === tpl._id;
+                      return (
+                        <div
+                          key={tpl._id}
+                          onClick={() => handleSelectEmailTemplate(tpl)}
+                          className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+                            isSelected
+                              ? 'bg-red-50/60 border-primary shadow-sm'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                              <FileText size={14} className={isSelected ? 'text-primary' : 'text-slate-400'} />
+                              <span>{tpl.name || tpl.title}</span>
+                            </span>
+                            {isSelected && <span className="bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Selected</span>}
+                          </div>
+                          <p className="text-[11px] text-slate-600 font-mono line-clamp-2 leading-relaxed">
+                            {tpl.content || tpl.title}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
+                <hr className="border-slate-100" />
+
+                {/* Email Subject Preview & Edit */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-650 uppercase">Email Subject</label>
                   <input
@@ -728,14 +802,15 @@ export default function UsersAdminPage() {
                     required
                     value={emailForm.subject}
                     onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
-                    className="border border-slate-200 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
+                    className="border border-slate-200 rounded px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
 
+                {/* Email Content Preview & Edit */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-650 uppercase">Email Body / Content</label>
                   <textarea
-                    rows={6}
+                    rows={5}
                     required
                     value={emailForm.content}
                     onChange={(e) => setEmailForm({ ...emailForm, content: e.target.value })}
@@ -745,6 +820,7 @@ export default function UsersAdminPage() {
 
               </div>
 
+              {/* Modal Footer */}
               <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
                 <button
                   type="button"
@@ -759,7 +835,7 @@ export default function UsersAdminPage() {
                   className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-5 py-2 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <Send size={14} />
-                  <span>{sendingBulkEmail ? 'Dispatching Email...' : 'Send Bulk Email'}</span>
+                  <span>{sendingBulkEmail ? 'Dispatching...' : `Send Email to ${selectedUserIds.length} Selected`}</span>
                 </button>
               </div>
             </form>
@@ -768,17 +844,17 @@ export default function UsersAdminPage() {
         </div>
       )}
 
-      {/* Bulk Send Notification Modal Dialog */}
+      {/* Bulk Send Notification Modal Dialog (Lists DB Templates) */}
       {isNotifModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-slideIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-slideIn">
             
             {/* Header */}
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Bell size={18} className="text-amber-500" />
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Bulk In-App Notification ({selectedUserIds.length} Recipients)
+                  Select Notification Template ({selectedUserIds.length} Recipients)
                 </h3>
               </div>
               <button
@@ -789,24 +865,49 @@ export default function UsersAdminPage() {
               </button>
             </div>
 
-            {/* Form */}
+            {/* Form & DB Templates List */}
             <form onSubmit={handleSendBulkNotif}>
-              <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+              <div className="p-6 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
                 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Select Notification Template</label>
-                  <select
-                    value={notifForm.template}
-                    onChange={(e) => handleNotifTemplateChange(e.target.value)}
-                    className="border border-slate-200 rounded px-3 py-2 text-xs bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-primary"
-                  >
-                    <option value="security">Account Security Clearance Notice</option>
-                    <option value="kyc">KYC Document Audit Reminder</option>
-                    <option value="maintenance">System Maintenance Announcement</option>
-                    <option value="custom">Custom In-App Notification</option>
-                  </select>
+                {/* DB Notification Templates Cards Selection */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-extrabold text-slate-555 uppercase tracking-wider flex items-center justify-between">
+                    <span>Database Notification Templates</span>
+                    {loadingDbNotifs && <span className="text-amber-600 animate-pulse">Loading templates...</span>}
+                  </label>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {dbNotifTemplates.map((tpl) => {
+                      const isSelected = selectedNotifTplId === tpl._id;
+                      return (
+                        <div
+                          key={tpl._id}
+                          onClick={() => handleSelectNotifTemplate(tpl)}
+                          className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+                            isSelected
+                              ? 'bg-amber-50/60 border-amber-500 shadow-sm'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                              <Bell size={14} className={isSelected ? 'text-amber-600' : 'text-slate-400'} />
+                              <span>{tpl.name || tpl.title}</span>
+                            </span>
+                            {isSelected && <span className="bg-amber-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Selected</span>}
+                          </div>
+                          <p className="text-[11px] text-slate-600 font-sans line-clamp-2 leading-relaxed">
+                            {tpl.content || tpl.message || tpl.title}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
+                <hr className="border-slate-100" />
+
+                {/* Title */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-650 uppercase">Notification Title</label>
                   <input
@@ -814,10 +915,11 @@ export default function UsersAdminPage() {
                     required
                     value={notifForm.title}
                     onChange={(e) => setNotifForm({ ...notifForm, title: e.target.value })}
-                    className="border border-slate-200 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
+                    className="border border-slate-200 rounded px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
                   />
                 </div>
 
+                {/* Message */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-650 uppercase">Notification Message</label>
                   <textarea
@@ -831,6 +933,7 @@ export default function UsersAdminPage() {
 
               </div>
 
+              {/* Modal Footer */}
               <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
                 <button
                   type="button"
@@ -845,7 +948,7 @@ export default function UsersAdminPage() {
                   className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-5 py-2 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <Bell size={14} />
-                  <span>{sendingBulkNotif ? 'Broadcasting...' : 'Send Notification'}</span>
+                  <span>{sendingBulkNotif ? 'Broadcasting...' : `Send Notification to ${selectedUserIds.length} Selected`}</span>
                 </button>
               </div>
             </form>
