@@ -40,9 +40,9 @@ export default function RegisterClient() {
         throw new Error(data.message || 'Registration failed');
       }
 
-      // Save token and user details
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Clear any previous session so user must log in explicitly
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
 
       // Redirect to registration success page
       router.push('/register/success');
