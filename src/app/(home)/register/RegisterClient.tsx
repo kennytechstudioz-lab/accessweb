@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Landmark, User, Mail, Lock, Phone, MapPin, Calendar, ArrowRight, AlertCircle } from 'lucide-react';
+import { Landmark, User, Mail, Lock, Phone, MapPin, Calendar, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { currencies } from '@/util/countries';
 
 export default function RegisterClient() {
@@ -18,6 +18,7 @@ export default function RegisterClient() {
     address: '',
     dob: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +55,7 @@ export default function RegisterClient() {
   };
 
   return (
-    <div className="bg-slate-50 py-16 px-[10px] sm:px-6 flex justify-center items-center">
+    <div className="bg-slate-50 py-16 px-[10px] sm:px-6 flex justify-center items-center font-sans">
       <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xl max-w-xl w-full flex flex-col gap-6">
         
         {/* Header */}
@@ -88,7 +89,7 @@ export default function RegisterClient() {
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="e.g. John Doe"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
                 />
               </div>
             </div>
@@ -103,7 +104,7 @@ export default function RegisterClient() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="name@example.com"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
                 />
               </div>
             </div>
@@ -120,7 +121,7 @@ export default function RegisterClient() {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   placeholder="e.g. johndoe12"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
                 />
               </div>
             </div>
@@ -130,13 +131,21 @@ export default function RegisterClient() {
               <div className="relative">
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="********"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                  className="w-full border border-slate-200 rounded pl-10 pr-11 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
           </div>
@@ -152,7 +161,7 @@ export default function RegisterClient() {
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   placeholder="+1 (555) 123-4567"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
                 />
               </div>
             </div>
@@ -203,7 +212,7 @@ export default function RegisterClient() {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="e.g. 123 Main St, New York"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
                 />
               </div>
             </div>

@@ -89,11 +89,11 @@ export default function DashboardOverview() {
       {/* 2. Account Metric Cards (Multi-currency grid) */}
       <div>
         <h3 className="font-bold text-slate-800 text-base uppercase tracking-wider mb-4">Multi-Currency Accounts</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="flex overflow-x-auto gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 pb-2 snap-x snap-mandatory scrollbar-thin">
           {accounts.map((acc) => (
             <div 
               key={acc._id} 
-              className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-lg flex flex-col gap-6 relative overflow-hidden group hover:-translate-y-1 transition-all"
+              className="min-w-[260px] sm:min-w-0 snap-start flex-shrink-0 sm:flex-shrink bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-lg flex flex-col gap-6 relative overflow-hidden group hover:-translate-y-1 transition-all"
             >
               <div className="absolute right-0 top-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all" />
               <div className="flex justify-between items-center relative z-10">

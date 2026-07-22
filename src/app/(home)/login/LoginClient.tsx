@@ -3,12 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Landmark, Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
+import { Landmark, Lock, User, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 
 export default function LoginClient() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -61,7 +62,7 @@ export default function LoginClient() {
   };
 
   return (
-    <div className="bg-slate-50 min-h-[80vh] py-16 px-[10px] sm:px-6 flex justify-center items-center">
+    <div className="bg-slate-50 min-h-[80vh] py-16 px-[10px] sm:px-6 flex justify-center items-center font-sans">
       <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xl max-w-md w-full flex flex-col gap-6">
         
         {/* Header */}
@@ -86,14 +87,14 @@ export default function LoginClient() {
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-slate-600">Username or Email</label>
             <div className="relative">
-              <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450" />
+              <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter username"
-                className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
               />
             </div>
           </div>
@@ -101,18 +102,28 @@ export default function LoginClient() {
           <div className="flex flex-col gap-1">
             <div className="flex justify-between items-center">
               <label className="text-xs font-bold text-slate-600">Secure Password</label>
-              <Link href="/terms" className="text-xs text-primary hover:underline">Forgot?</Link>
+              <Link href="/forgot-password" className="text-xs text-primary hover:underline font-bold">
+                Forgot?
+              </Link>
             </div>
             <div className="relative">
-              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450" />
+              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="********"
-                className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                className="w-full border border-slate-200 rounded pl-10 pr-11 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
