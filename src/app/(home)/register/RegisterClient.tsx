@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Landmark, User, Mail, Lock, Phone, MapPin, Calendar, HelpCircle, ArrowRight, AlertCircle } from 'lucide-react';
+import { Landmark, User, Mail, Lock, Phone, MapPin, Calendar, ArrowRight, AlertCircle } from 'lucide-react';
+import { currencies } from '@/util/countries';
 
 export default function RegisterClient() {
   const router = useRouter();
@@ -13,11 +14,9 @@ export default function RegisterClient() {
     password: '',
     fullName: '',
     phoneNumber: '',
-    country: '',
+    country: 'United States',
     address: '',
     dob: '',
-    pin: '',
-    baseCurrency: 'USD',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,13 +24,6 @@ export default function RegisterClient() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    // PIN check
-    if (!/^\d{4,6}$/.test(formData.pin)) {
-      setError('Security PIN must be a 4 to 6 digit number.');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -184,15 +176,20 @@ export default function RegisterClient() {
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-slate-650">Country</label>
               <div className="relative">
-                <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450" />
-                <input
-                  type="text"
+                <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450 pointer-events-none z-10" />
+                <select
                   required
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  placeholder="e.g. United States"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
-                />
+                  className="w-full border border-slate-200 rounded pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 text-slate-800"
+                >
+                  <option value="" disabled>Select Country</option>
+                  {currencies.map((c) => (
+                    <option key={c.country} value={c.country}>
+                      {c.country}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -209,38 +206,6 @@ export default function RegisterClient() {
                   className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
                 />
               </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-650">Security PIN (4-6 digits)</label>
-              <div className="relative">
-                <HelpCircle size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-450" />
-                <input
-                  type="password"
-                  maxLength={6}
-                  required
-                  value={formData.pin}
-                  onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
-                  placeholder="e.g. 1234"
-                  className="w-full border border-slate-200 rounded px-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-650">Base Currency Preference</label>
-              <select
-                value={formData.baseCurrency}
-                onChange={(e) => setFormData({ ...formData, baseCurrency: e.target.value })}
-                className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
-              >
-                <option value="USD">USD ($) - US Dollar</option>
-                <option value="EUR">EUR (€) - Euro</option>
-                <option value="GBP">GBP (£) - British Pound</option>
-                <option value="CAD">CAD ($) - Canadian Dollar</option>
-              </select>
             </div>
           </div>
 
