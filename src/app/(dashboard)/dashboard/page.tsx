@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Landmark, 
   ArrowRightLeft, 
@@ -15,8 +16,12 @@ import {
   ChevronRight, 
   Wifi 
 } from 'lucide-react';
+import { useToastStore } from '@/store/toastStore';
 
 export default function DashboardOverview() {
+  const router = useRouter();
+  const { showToast } = useToastStore();
+
   const [profile, setProfile] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -142,6 +147,15 @@ export default function DashboardOverview() {
       setActiveCardIndex((prev) => (prev === 0 ? debitCards.length - 1 : prev - 1));
     }
     setTouchDeltaX(0);
+  };
+
+  // Card Application Click with KYC Verification Toast Check
+  const handleApplyCardClick = (e: React.MouseEvent) => {
+    if (!profile?.isVerified) {
+      e.preventDefault();
+      showToast('Please complete identity clearance (KYC verification) before applying for a debit card.', 'error');
+      router.push('/dashboard/kyc');
+    }
   };
 
   if (loading) {
@@ -279,7 +293,7 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* 3 Colored Debit Card Carousel Section (Auto-sliding & Swipe supported) */}
+        {/* 3 Colored Debit Card Sliding Carousel Section */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 px-[10px] py-6 sm:p-8 shadow-sm flex flex-col gap-5">
           <div className="flex justify-between items-center pb-3 border-b border-slate-100">
             <h3 className="font-bold text-slate-900 text-sm sm:text-base uppercase tracking-wider">
@@ -290,9 +304,9 @@ export default function DashboardOverview() {
             </span>
           </div>
 
-          {/* Carousel Card Container with Touch & Drag Handlers */}
+          {/* Sliding Carousel Track Container */}
           <div 
-            className="relative select-none cursor-grab active:cursor-grabbing overflow-hidden rounded-2xl"
+            className="relative select-none cursor-grab active:cursor-grabbing overflow-hidden rounded-2xl w-full"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -301,52 +315,60 @@ export default function DashboardOverview() {
             onMouseUp={handleTouchEnd}
             onMouseLeave={handleTouchEnd}
           >
+            {/* Horizontal Flex Track that physically slides left & right */}
             <div 
-              className={`w-full h-48 sm:h-52 rounded-2xl p-5 ${debitCards[activeCardIndex].bg} border ${debitCards[activeCardIndex].border} shadow-xl text-white flex flex-col justify-between relative overflow-hidden transition-transform duration-300`}
+              className="flex w-full gap-4 transition-transform duration-500 ease-in-out"
               style={{
-                transform: isDragging ? `translateX(${touchDeltaX}px)` : 'translateX(0px)',
+                transform: `translateX(calc(-${activeCardIndex * 100}% - ${activeCardIndex * 16}px + ${isDragging ? touchDeltaX : 0}px))`,
+                transition: isDragging ? 'none' : 'transform 0.5s ease-in-out',
               }}
             >
-              
-              {/* Decorative Blur Effect */}
-              <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-black/20 rounded-full blur-2xl pointer-events-none" />
+              {debitCards.map((card) => (
+                <div 
+                  key={card.id}
+                  className={`w-full flex-shrink-0 h-48 sm:h-52 rounded-2xl p-5 ${card.bg} border ${card.border} shadow-xl text-white flex flex-col justify-between relative overflow-hidden`}
+                >
+                  {/* Decorative Blur Effect */}
+                  <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                  <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-black/20 rounded-full blur-2xl pointer-events-none" />
 
-              {/* Top Row: Bank Brand & Contactless Symbol */}
-              <div className="flex justify-between items-start relative z-10">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold tracking-wider uppercase opacity-90">Access National</span>
-                  <span className="text-[9px] uppercase tracking-widest text-white/70 font-mono">Debit Card</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Wifi size={20} className="text-white/80 rotate-90" />
-                  <span className="font-bold font-mono text-sm tracking-widest">{debitCards[activeCardIndex].brand}</span>
-                </div>
-              </div>
+                  {/* Top Row: Bank Brand & Contactless Symbol */}
+                  <div className="flex justify-between items-start relative z-10">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold tracking-wider uppercase opacity-90">Access National</span>
+                      <span className="text-[9px] uppercase tracking-widest text-white/70 font-mono">Debit Card</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Wifi size={20} className="text-white/80 rotate-90" />
+                      <span className="font-bold font-mono text-sm tracking-widest">{card.brand}</span>
+                    </div>
+                  </div>
 
-              {/* Center: Metallic Chip & Card Number */}
-              <div className="flex flex-col gap-3 relative z-10 my-auto">
-                <div className="w-10 h-7 rounded bg-gradient-to-tr from-amber-200 via-amber-400 to-yellow-100 border border-amber-500/50 shadow-inner flex items-center justify-center">
-                  <div className="w-8 h-5 border border-amber-600/40 rounded-sm" />
-                </div>
-                <span className="font-mono text-base sm:text-lg tracking-widest text-white/90 drop-shadow font-semibold">
-                  {debitCards[activeCardIndex].cardNumber}
-                </span>
-              </div>
+                  {/* Center: Metallic Chip & Card Number */}
+                  <div className="flex flex-col gap-3 relative z-10 my-auto">
+                    <div className="w-10 h-7 rounded bg-gradient-to-tr from-amber-200 via-amber-400 to-yellow-100 border border-amber-500/50 shadow-inner flex items-center justify-center">
+                      <div className="w-8 h-5 border border-amber-600/40 rounded-sm" />
+                    </div>
+                    <span className="font-mono text-base sm:text-lg tracking-widest text-white/90 drop-shadow font-semibold">
+                      {card.cardNumber}
+                    </span>
+                  </div>
 
-              {/* Bottom Row: Cardholder Name & Expiry */}
-              <div className="flex justify-between items-end relative z-10 text-[10px] sm:text-xs">
-                <div className="flex flex-col">
-                  <span className="text-[8px] uppercase tracking-wider text-white/60 font-semibold">Cardholder</span>
-                  <span className="font-bold uppercase tracking-wider font-mono text-white/90 truncate max-w-[170px]">
-                    {debitCards[activeCardIndex].holder}
-                  </span>
+                  {/* Bottom Row: Cardholder Name & Expiry */}
+                  <div className="flex justify-between items-end relative z-10 text-[10px] sm:text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] uppercase tracking-wider text-white/60 font-semibold">Cardholder</span>
+                      <span className="font-bold uppercase tracking-wider font-mono text-white/90 truncate max-w-[170px]">
+                        {card.holder}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[8px] uppercase tracking-wider text-white/60 font-semibold">Expires</span>
+                      <span className="font-mono font-bold text-white/90">{card.expiry}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[8px] uppercase tracking-wider text-white/60 font-semibold">Expires</span>
-                  <span className="font-mono font-bold text-white/90">{debitCards[activeCardIndex].expiry}</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -364,9 +386,10 @@ export default function DashboardOverview() {
             ))}
           </div>
 
-          {/* Apply for Card Button */}
+          {/* Apply for Card Button (with KYC verification check) */}
           <Link
             href="/dashboard/cards"
+            onClick={handleApplyCardClick}
             className="w-full py-3.5 px-4 bg-primary hover:bg-red-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer text-center mt-1"
           >
             <CreditCard size={16} />
@@ -381,7 +404,7 @@ export default function DashboardOverview() {
       <div className="bg-white rounded-2xl border border-slate-200 px-[10px] py-6 sm:p-8 shadow-sm">
         <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-base uppercase tracking-wider">
-            Transaction Activity Ledger
+            Latest Transactions
           </h3>
           <Link href="/dashboard/transfer" className="text-xs text-primary hover:underline font-bold">
             New Transfer

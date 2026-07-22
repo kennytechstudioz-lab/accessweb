@@ -20,12 +20,15 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import SmartSuppWidget from '@/components/SmartSuppWidget';
+import { useToastStore } from '@/store/toastStore';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { message, type, hideToast } = useToastStore();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -86,6 +89,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800 relative select-none">
       
+      {/* Floating Toast Notification overlay */}
+      {message && (
+        <div className="fixed top-6 right-6 z-[9999] animate-slideIn">
+          <div className={`p-4 rounded-xl shadow-2xl border flex items-center justify-between gap-4 min-w-[320px] max-w-sm ${
+            type === 'success' 
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-800' 
+              : 'bg-red-50 border-red-300 text-red-800'
+          }`}>
+            <span className="font-sans text-xs sm:text-sm font-semibold">{message}</span>
+            <button 
+              onClick={hideToast}
+              className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5 rounded-full hover:bg-black/5 flex-shrink-0"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 1. Desktop Sidebar Panel */}
       <aside className="hidden md:flex flex-col w-64 bg-primary text-white h-full shadow-xl relative z-30 justify-between">
         <div className="overflow-y-auto flex-1 scrollbar-thin">
@@ -122,11 +144,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 flex flex-col gap-3 border-t border-red-800">
           <div className="flex items-center gap-3 px-2 py-1">
             <div className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-sm border border-white/20 uppercase">
-              {currentUser.fullName ? currentUser.fullName[0] : currentUser.username[0]}
+              {currentUser.username ? currentUser.username[0] : 'U'}
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-white leading-tight truncate max-w-[130px]">
-                {currentUser.fullName || currentUser.username}
+                {currentUser.username}
               </span>
               <span className="text-[10px] text-red-200 font-mono tracking-wider mt-0.5 truncate max-w-[130px]">
                 Acc: {currentUser.accountNumber}
@@ -157,7 +179,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu size={24} />
             </button>
             <h2 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-wide">
-              Welcome, <span className="text-primary">{currentUser.fullName || currentUser.username}</span>
+              Welcome, <span className="text-primary">{currentUser.username}</span>
             </h2>
           </div>
 
