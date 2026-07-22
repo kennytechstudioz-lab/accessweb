@@ -153,8 +153,8 @@ export default function DashboardOverview() {
   const handleApplyCardClick = (e: React.MouseEvent) => {
     if (!profile?.isVerified) {
       e.preventDefault();
-      showToast('Please complete identity clearance (KYC verification) before applying for a debit card.', 'error');
-      router.push('/dashboard/kyc');
+      showToast('Please complete identity clearance (KYC verification) in your profile before applying for a debit card.', 'error');
+      router.push('/dashboard/profile');
     }
   };
 
@@ -180,11 +180,11 @@ export default function DashboardOverview() {
             <div>
               <h4 className="font-bold text-amber-900 text-sm sm:text-base">Identity Verification Required</h4>
               <p className="text-xs sm:text-sm text-amber-700 font-light mt-0.5 leading-relaxed">
-                Your online banking vault is partially active. Upload valid identity clearance documents to complete verification and clear international transfers.
+                Your online banking vault is partially active. Upload valid identity clearance documents in your profile to complete verification and clear international transfers.
               </p>
             </div>
           </div>
-          <Link href="/dashboard/kyc" className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded shadow transition-all flex-shrink-0">
+          <Link href="/dashboard/profile" className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-5 py-2.5 rounded shadow transition-all flex-shrink-0">
             Submit KYC
           </Link>
         </div>
