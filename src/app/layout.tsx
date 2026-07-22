@@ -13,9 +13,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Access National Bank",
-  description: "Secure Online Vault",
+  title: {
+    default: 'Access National Bank | Premier Digital & Commercial Banking',
+    template: '%s | Access National Bank',
+  },
+  description: 'Access National Bank provides secure multi-currency accounts, international wire transfers, checking vaults, and wealth management services globally.',
+  keywords: ['Access National Bank', 'Online Banking', 'Multi-currency Account', 'International Transfers', 'Commercial Banking', 'Digital Vault'],
+  authors: [{ name: 'Access National Bank' }],
+  openGraph: {
+    title: 'Access National Bank | Premier Digital & Commercial Banking',
+    description: 'Access National Bank provides secure multi-currency accounts, international wire transfers, checking vaults, and wealth management services globally.',
+    siteName: 'Access National Bank',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Access National Bank | Premier Digital & Commercial Banking',
+    description: 'Access National Bank provides secure multi-currency accounts, international wire transfers, checking vaults, and wealth management services globally.',
+  },
 };
+
 
 import { Providers } from "@/components/Providers";
 

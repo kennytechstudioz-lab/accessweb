@@ -122,7 +122,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-black/60" />
               
               {/* Slide Content with sequential entrance animations */}
-              <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 w-full relative z-20 text-white flex flex-col gap-5 sm:gap-6 font-sans">
+              <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12 w-full relative z-20 text-white flex flex-col gap-5 sm:gap-6 font-sans">
                 <h1
                   className={`text-3xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight transition-all duration-1000 transform ${
                     isActive ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
@@ -180,7 +180,7 @@ export default function Home() {
 
       {/* 2. Overlapping Features Grid Section */}
       <section className="relative z-30 bg-transparent">
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12">
+        <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12">
           {/* Grid Card itself overlapping hero */}
           <div className="bg-white rounded-sm border border-slate-200/80 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 overflow-hidden relative z-40 -mt-20 sm:-mt-24 md:-mt-28 shadow-sm">
           
@@ -251,10 +251,10 @@ export default function Home() {
 
 
       {/* 3. About Us Detail Section */}
-      <section id="about" className="py-24 px-4 sm:px-8 relative overflow-hidden bg-white">
+      <section id="about" className="py-24 px-[10px] sm:px-8 relative overflow-hidden bg-white">
         
         {/* Main Grid Wrapper */}
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center relative z-10">
+        <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center relative z-10">
           
           {/* Left Side: Graphic Banner and Overlapping Badges */}
           <div className="relative w-full max-w-[540px] mx-auto lg:mx-0">
@@ -390,10 +390,10 @@ export default function Home() {
       </section>
 
       {/* 4. Our Services Section */}
-      <section className="bg-slate-50 py-24 px-4 sm:px-8 border-t border-slate-100 relative overflow-hidden">
+      <section className="bg-slate-50 py-24 px-[10px] sm:px-8 border-t border-slate-100 relative overflow-hidden">
         
         {/* Main Wrapper */}
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 relative z-10">
+        <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12 relative z-10">
           
           {/* Section Header */}
           <div className="text-center flex flex-col items-center gap-3 mb-16">
@@ -607,7 +607,7 @@ export default function Home() {
 
       {/* 5. Video Play Presentation Section */}
       <section
-        className="relative py-32 px-4 sm:px-8 bg-cover bg-center flex items-center justify-center min-h-[500px] overflow-hidden"
+        className="relative py-32 px-[10px] sm:px-8 bg-cover bg-center flex items-center justify-center min-h-[500px] overflow-hidden"
         style={{
           backgroundImage: "url('/images/video-bg.jpg')",
         }}
@@ -616,7 +616,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-slate-950/70 z-0" />
 
         {/* Contents */}
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 w-full text-center relative z-10 flex flex-col items-center gap-4">
+        <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12 w-full text-center relative z-10 flex flex-col items-center gap-4">
           
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white max-w-2xl leading-tight">
             The 3rd Generation Private Commercial Bank
@@ -640,7 +640,7 @@ export default function Home() {
       </section>
 
       {/* 6. Overlapping Statistics Row */}
-      <section className="relative z-30 px-4 sm:px-8 md:px-12 max-w-[1380px] mx-auto -mt-16 sm:-mt-20 mb-24">
+      <section className="relative z-30 px-[10px] sm:px-8 md:px-12 max-w-[1380px] mx-auto -mt-16 sm:-mt-20 mb-24">
         <div className="bg-white shadow-2xl rounded-sm overflow-hidden grid grid-cols-1 md:grid-cols-3">
           
           {/* Stats 1 */}
@@ -686,8 +686,8 @@ export default function Home() {
       </section>
 
       {/* 7. Mobile App Section */}
-      <section className="py-24 px-4 sm:px-8 bg-white relative overflow-hidden">
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 relative z-10">
+      <section className="py-24 px-[10px] sm:px-8 bg-white relative overflow-hidden">
+        <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12 relative z-10">
           
           {/* Main Layout Card with Grid Left Block and Gray Right Block */}
           <div className="relative rounded-sm overflow-hidden min-h-[800px] grid grid-cols-1 lg:grid-cols-12 bg-[#F8F9FA] border border-slate-100/80 shadow-sm">
@@ -746,7 +746,7 @@ export default function Home() {
       </section>
 
       {/* 8. Testimonials Section */}
-      <section className="py-28 px-4 sm:px-8 border-t border-slate-100 relative overflow-hidden bg-white">
+      <section className="py-28 px-[10px] sm:px-8 border-t border-slate-100 relative overflow-hidden bg-white">
         
         {/* Testimonials Background Image with Opacity */}
         <div 
@@ -971,7 +971,7 @@ export default function Home() {
       </section>
 
       {/* 5. Simple FAQ Section */}
-      <section id="faq" className="py-20 px-4 sm:px-8 max-w-4xl mx-auto">
+      <section id="faq" className="py-20 px-[10px] sm:px-8 max-w-4xl mx-auto">
         <div className="text-center flex flex-col gap-3 mb-12">
           <h2 className="text-3xl font-bold text-slate-900">Frequently Asked Questions</h2>
           <p className="text-slate-500 font-light text-sm">Everything you need to know about our international banking operations.</p>
@@ -1016,7 +1016,7 @@ export default function Home() {
       <section id="contact" className="bg-slate-50/50 py-24 border-t border-slate-200/60 relative overflow-hidden">
         
         {/* Main Wrapper */}
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 relative z-10">
+        <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12 relative z-10">
           
           <div className="relative rounded-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12 bg-white border border-slate-200/60 shadow-sm items-stretch">
             

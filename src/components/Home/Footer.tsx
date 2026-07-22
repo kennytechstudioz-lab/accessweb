@@ -14,7 +14,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-secondary text-slate-400 pt-16 pb-8 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+      <div className="max-w-7xl mx-auto px-[10px] sm:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         
         {/* Logo & Description */}
         <div className="flex flex-col gap-4">
@@ -34,7 +34,8 @@ export default function Footer() {
             <li><Link href="/#about" className="hover:text-primary transition-colors">About Us</Link></li>
             <li><Link href="/#blog" className="hover:text-primary transition-colors">Blog</Link></li>
             <li><Link href="/#faq" className="hover:text-primary transition-colors">FAQs & Support</Link></li>
-            <li><Link href="/#contact" className="hover:text-primary transition-colors">Contact Support</Link></li>
+            <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
+            <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
           </ul>
         </div>
 
@@ -72,14 +73,15 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-16 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-light text-slate-500">
+      <div className="max-w-7xl mx-auto px-[10px] sm:px-8 mt-16 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-light text-slate-500">
         <p>&copy; {new Date().getFullYear()} Access National Bank. All rights reserved.</p>
         <div className="flex gap-6">
-          <Link href="/#about" className="hover:text-primary transition-colors">Privacy Policy</Link>
-          <Link href="/#about" className="hover:text-primary transition-colors">Terms of Service</Link>
+          <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link>
           <Link href="/#faq" className="hover:text-primary transition-colors">Security Clearance</Link>
         </div>
       </div>
+
     </footer>
   );
 }

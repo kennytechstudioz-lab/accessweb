@@ -70,7 +70,7 @@ export default function Header() {
     <>
       {/* 1. Header Section (Top Bar - Not Sticky) */}
       <header className="bg-secondary text-header-fg text-xs py-2.5 border-b border-slate-800">
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div className="max-w-[1380px] mx-auto px-[10px] sm:px-8 md:px-12 flex flex-col sm:flex-row justify-between items-center gap-2">
           {/* Top Links */}
           <div className="flex items-center gap-5 font-light text-slate-300">
             <Link href="/#faq" onClick={(e) => handleNavClick(e, 'faq')} className="hover:text-primary transition-colors">Career</Link>
@@ -95,7 +95,8 @@ export default function Header() {
 
       {/* 2. Navigation Section (Sticky White Bar) */}
       <nav className="sticky-nav bg-nav-bg text-nav-fg border-b border-slate-200">
-        <div className="max-w-[1380px] mx-auto flex justify-between items-center h-20 px-4 sm:px-8 md:px-12 relative">
+        <div className="max-w-[1380px] mx-auto flex justify-between items-center h-20 px-[10px] sm:px-8 md:px-12 relative">
+
           
           <div className="absolute left-4 sm:left-8 md:left-12 top-0 bottom-0 flex items-center pr-8 z-10">
             <Link href="/#top" onClick={(e) => handleNavClick(e, 'top')} className="slant-bg h-full px-6 sm:px-10 flex items-center shadow-lg animate-fadeIn">
