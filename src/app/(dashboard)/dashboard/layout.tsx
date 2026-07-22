@@ -19,16 +19,27 @@ import {
   CreditCard,
   ShieldCheck
 } from 'lucide-react';
+import { Suspense } from 'react';
 import SmartSuppWidget from '@/components/SmartSuppWidget';
 import { useToastStore } from '@/store/toastStore';
+import { useNotificationsStore } from '@/store/notificationsStore';
+import { useSearchParams } from 'next/navigation';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { message, type, hideToast } = useToastStore();
+  const { fetchNotifications, getUnreadCount } = useNotificationsStore();
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const unreadCount = getUnreadCount();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -86,6 +97,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const fullPath = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
+
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800 relative select-none">
       
@@ -120,7 +133,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Links */}
           <nav className="px-4 py-6 flex flex-col gap-1.5">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href || (link.href.includes('?') && pathname === link.href.split('?')[0]);
+              const isActive = link.href.includes('?')
+                ? fullPath === link.href
+                : pathname === link.href && !searchParams.get('type');
               const Icon = link.icon;
               return (
                 <Link
@@ -196,7 +211,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 title="Notifications"
               >
                 <Bell size={18} />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full animate-ping"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white font-black text-[9px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+                    {unreadCount > 10 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
 
               <Link
@@ -245,7 +264,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <nav className="px-4 py-6 flex flex-col gap-1.5">
                 {navLinks.map((link) => {
-                  const isActive = pathname === link.href;
+                  const isActive = link.href.includes('?')
+                    ? fullPath === link.href
+                    : pathname === link.href && !searchParams.get('type');
                   const Icon = link.icon;
                   return (
                     <Link
@@ -306,5 +327,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <SmartSuppWidget />
     </div>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-100 text-slate-800">
+        <div className="flex flex-col items-center gap-3">
+          <Landmark size={48} className="animate-spin text-primary" />
+          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Decrypting Session Vault...</p>
+        </div>
+      </div>
+    }>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
   );
 }

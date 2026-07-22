@@ -179,12 +179,14 @@ export default function NotificationsAdminPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {notifications.map((notif) => {
-                  const dateStr = new Date(notif.time * 1000).toLocaleString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  });
+                  const dateStr = notif.time 
+                    ? new Date(typeof notif.time === 'number' && notif.time < 10000000000 ? notif.time * 1000 : notif.time).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : 'Recent';
 
                   return (
                     <tr key={notif._id} className="hover:bg-slate-50 transition-colors">
