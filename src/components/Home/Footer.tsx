@@ -1,18 +1,26 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { Landmark, Phone, Mail, MapPin } from 'lucide-react';
+import { Phone, Mail, MapPin } from 'lucide-react';
+import { useSettingsStore } from '@/store/settingsStore';
 
 export default function Footer() {
+  const { settings, fetchSettings } = useSettingsStore();
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
   return (
     <footer className="bg-secondary text-slate-400 pt-16 pb-8 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         
         {/* Logo & Description */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2 text-white font-bold text-xl">
-            <Landmark size={28} className="text-primary animate-pulse" />
-            <span>Access <span className="text-primary">National</span></span>
-          </div>
+          <Link href="/#top" className="flex items-center">
+            <img src="/images/AccessRedLogo.png" alt="Access National Bank" className="h-10 w-auto object-contain" />
+          </Link>
           <p className="text-sm font-light leading-relaxed">
             Access National Bank is a premier global financial institution offering state-of-the-art multi-currency checking, savings, and investment solutions. We empower your international wealth management.
           </p>
@@ -48,16 +56,16 @@ export default function Footer() {
           <ul className="flex flex-col gap-4 text-sm font-light">
             <li className="flex items-start gap-2.5">
               <MapPin size={18} className="text-primary flex-shrink-0 mt-0.5" />
-              <span>6060 ROCKSIDE WOODS BLVD, OH United States</span>
+              <span>{settings?.companyAddress || '6060 ROCKSIDE WOODS BLVD, OH United States'}</span>
             </li>
             <li className="flex items-center gap-2.5">
               <Phone size={18} className="text-primary flex-shrink-0" />
-              <span>+1 (555) 123-4567</span>
+              <span>{settings?.companyPhoneNumber || '+1 (555) 123-4567'}</span>
             </li>
             <li className="flex items-center gap-2.5">
               <Mail size={18} className="text-primary flex-shrink-0" />
-              <a href="mailto:support@accessnationalltd.online" className="hover:text-primary transition-colors">
-                support@accessnationalltd.online
+              <a href={`mailto:${settings?.systemEmail || 'support@accessnationalltd.online'}`} className="hover:text-primary transition-colors">
+                {settings?.systemEmail || 'support@accessnationalltd.online'}
               </a>
             </li>
           </ul>
@@ -75,3 +83,4 @@ export default function Footer() {
     </footer>
   );
 }
+

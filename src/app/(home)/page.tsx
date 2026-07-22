@@ -1,14 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Landmark, Shield, Globe, Award, Sparkles, HelpCircle, ArrowRight, TrendingUp } from 'lucide-react';
+import { useFaqStore } from '@/store/faqStore';
+import { useBlogsStore } from '@/store/blogsStore';
 
 export default function Home() {
+  const { faqs, fetchFaqs } = useFaqStore();
+  const { blogs, fetchBlogs } = useBlogsStore();
   const [calculatorType, setCalculatorType] = useState<'savings' | 'loan'>('savings');
   const [calcAmount, setCalcAmount] = useState(5000);
   const [calcDuration, setCalcDuration] = useState(12); // months
   const [contactSubmitted, setContactSubmitted] = useState(false);
+
+  useEffect(() => {
+    fetchFaqs();
+    fetchBlogs();
+  }, [fetchFaqs, fetchBlogs]);
+
+
 
   const calculateResult = () => {
     if (calculatorType === 'savings') {
@@ -168,13 +179,14 @@ export default function Home() {
       </section>
 
       {/* 2. Overlapping Features Grid Section */}
-      <section className="relative z-30 bg-white pb-16">
-        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12 -mt-20 sm:-mt-24 md:-mt-28">
-          <div className="bg-white shadow-2xl rounded-sm border border-slate-100/60 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 overflow-hidden relative z-20">
+      <section className="relative z-30 bg-transparent">
+        <div className="max-w-[1380px] mx-auto px-4 sm:px-8 md:px-12">
+          {/* Grid Card itself overlapping hero */}
+          <div className="bg-white rounded-sm border border-slate-200/80 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 overflow-hidden relative z-40 -mt-20 sm:-mt-24 md:-mt-28 shadow-sm">
           
           {/* Card 1 */}
           <div className="flex flex-col gap-5 p-8 sm:p-10 md:p-12 border-b lg:border-b-0 lg:border-r last:border-b-0 lg:last:border-r-0 border-slate-100/80 hover:bg-primary group transition-all duration-300">
-            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-red-100/20 flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
+            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
               <svg className="w-8 h-8 text-white group-hover:text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
@@ -183,13 +195,13 @@ export default function Home() {
               Secure International Transaction
             </h3>
             <p className="text-slate-500 text-sm font-light leading-relaxed group-hover:text-white/80 transition-colors duration-300">
-              Tortor neque sed tellus estian eget dui id ante tristique more tristique dolor.
+              End-to-end encrypted wire transfers with real-time tracking and instant multi-currency clearance.
             </p>
           </div>
 
           {/* Card 2 */}
           <div className="flex flex-col gap-5 p-8 sm:p-10 md:p-12 border-b lg:border-b-0 lg:border-r last:border-b-0 lg:last:border-r-0 border-slate-100/80 hover:bg-primary group transition-all duration-300">
-            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-red-100/20 flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
+            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
               <svg className="w-8 h-8 text-white group-hover:text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
@@ -198,13 +210,13 @@ export default function Home() {
               24/7 Support from the Expert Team
             </h3>
             <p className="text-slate-500 text-sm font-light leading-relaxed group-hover:text-white/80 transition-colors duration-300">
-              Tortor neque sed tellus estian eget dui id ante tristique more tristique dolor.
+              Dedicated relationship managers and round-the-clock technical assistance available anytime, anywhere.
             </p>
           </div>
 
           {/* Card 3 */}
           <div className="flex flex-col gap-5 p-8 sm:p-10 md:p-12 border-b lg:border-b-0 lg:border-r last:border-b-0 lg:last:border-r-0 border-slate-100/80 hover:bg-primary group transition-all duration-300">
-            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-red-100/20 flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
+            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
               <svg className="w-8 h-8 text-white group-hover:text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
               </svg>
@@ -213,13 +225,13 @@ export default function Home() {
               Lowest Processing Fee than Other Banks
             </h3>
             <p className="text-slate-500 text-sm font-light leading-relaxed group-hover:text-white/80 transition-colors duration-300">
-              Tortor neque sed tellus estian eget dui id ante tristique more tristique dolor.
+              Enjoy zero maintenance fees and institutional exchange rates with zero hidden charges.
             </p>
           </div>
 
           {/* Card 4 */}
           <div className="flex flex-col gap-5 p-8 sm:p-10 md:p-12 border-b lg:border-b-0 lg:border-r last:border-b-0 lg:last:border-r-0 border-slate-100/80 hover:bg-primary group transition-all duration-300">
-            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-red-100/20 flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
+            <div className="w-18 h-18 bg-primary text-white rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-all duration-300">
               <svg className="w-8 h-8 text-white group-hover:text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -228,13 +240,15 @@ export default function Home() {
               Less Time in any Loans Approval
             </h3>
             <p className="text-slate-500 text-sm font-light leading-relaxed group-hover:text-white/80 transition-colors duration-300">
-              Tortor neque sed tellus estian eget dui id ante tristique more tristique dolor.
+              Automated credit scoring and rapid decision-making engines for fast commercial loan access.
             </p>
           </div>
 
           </div>
         </div>
       </section>
+
+
 
       {/* 3. About Us Detail Section */}
       <section id="about" className="py-24 px-4 sm:px-8 relative overflow-hidden bg-white">
@@ -300,7 +314,7 @@ export default function Home() {
               Financial Guidance for Every Stage of Life.
             </h2>
             <p className="text-slate-500 text-base sm:text-lg md:text-xl font-light leading-relaxed mb-4">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec felis, suscipit you take action against fraud. See it the Security Center for and Mobile and Online Banking.
+              At Access National Bank, we combine cutting-edge security with tailored financial solutions. From multi-currency checking accounts to high-yield savings and international wire clearance, we empower individuals and corporate clients globally.
             </p>
 
             {/* Bullet list with icons */}
@@ -318,7 +332,7 @@ export default function Home() {
                 <div className="flex flex-col gap-1">
                   <h4 className="font-extrabold text-slate-900 text-xl sm:text-2xl">Solution Focused</h4>
                   <p className="text-slate-500 text-sm sm:text-base font-light leading-relaxed">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec felis tincidunt feugiat
+                    Customized wealth plans, multi-currency debit cards, and 24/7 dedicated account managers tailored to your financial goals.
                   </p>
                 </div>
               </div>
@@ -337,10 +351,11 @@ export default function Home() {
                 <div className="flex flex-col gap-1">
                   <h4 className="font-extrabold text-slate-900 text-xl sm:text-2xl">99.99% Success</h4>
                   <p className="text-slate-500 text-sm sm:text-base font-light leading-relaxed">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec felis tincidunt feugiat
+                    High-availability cloud architecture guaranteeing zero-downtime wire clearance and real-time transaction processing.
                   </p>
                 </div>
               </div>
+
 
             </div>
 
@@ -698,8 +713,9 @@ export default function Home() {
               </h2>
               
               <p className="text-slate-500 text-base sm:text-lg font-light leading-relaxed mb-8 max-w-xl">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec felis, suscipit you take action against fraud. See it the Security Center for and Mobile and Online Banking.
+                Manage your multi-currency accounts, transfer funds globally, authorize wire clearances, and generate virtual debit cards directly from your smartphone with end-to-end encryption.
               </p>
+
 
               {/* App store download badges */}
               <div className="flex flex-wrap gap-4 relative z-10">
@@ -772,7 +788,7 @@ export default function Home() {
                 ★ ★ ★ ★ ★
               </div>
               <p className="text-slate-500 text-sm font-light leading-relaxed italic text-center">
-                &ldquo;Lorem ipsum dolor sit amet consectetur adipiscing elit pellentesque etiam nis quis at arcu nunc neque ac integer sit lobortis diam semper nulla duis in blandit.&rdquo;
+                &ldquo;Access National Bank transformed how our international team handles cross-border payroll. Wire transfers clear in minutes and multi-currency accounts save us thousands on conversion fees.&rdquo;
               </p>
             </div>
 
@@ -792,7 +808,7 @@ export default function Home() {
                 ★ ★ ★ ★ ★
               </div>
               <p className="text-slate-500 text-sm font-light leading-relaxed italic text-center">
-                &ldquo;Lorem ipsum dolor sit amet consectetur adipiscing elit pellentesque etiam nis quis at arcu nunc neque ac integer sit lobortis diam semper nulla duis in blandit.&rdquo;
+                &ldquo;The digital banking interface is unmatched. Managing USD, EUR, and GBP balances in a single unified dashboard with instant TAC code verification has been a game-changer.&rdquo;
               </p>
             </div>
 
@@ -812,9 +828,10 @@ export default function Home() {
                 ★ ★ ★ ★ ★
               </div>
               <p className="text-slate-500 text-sm font-light leading-relaxed italic text-center">
-                &ldquo;Lorem ipsum dolor sit amet consectetur adipiscing elit pellentesque etiam nis quis at arcu nunc neque ac integer sit lobortis diam semper nulla duis in blandit.&rdquo;
+                &ldquo;Outstanding security standards and round-the-clock customer support. Knowing our corporate funds are backed by 99.99% cloud uptime gives our investor group total confidence.&rdquo;
               </p>
             </div>
+
 
           </div>
 
@@ -866,158 +883,74 @@ export default function Home() {
 
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            {/* Card 1 */}
-            <div className="relative rounded-sm overflow-hidden h-[480px] group shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-end p-8 border border-slate-100/50">
-              {/* Background Image */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                style={{
-                  backgroundImage: "url('https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&h=800&q=80')"
-                }}
-              />
-              {/* Dark overlay gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-300 z-0" />
+            {blogs
+              .filter((b) => !b.category || b.category.toLowerCase() === 'blog')
+              .slice(0, 3)
+              .map((blog) => {
+                const dateStr = new Date(blog.time * 1000).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                });
+                const bannerBg = blog.banner || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&h=800&q=80';
 
-              {/* Contents */}
-              <div className="relative z-10 flex flex-col items-start w-full">
-                {/* Date badge */}
-                <div className="bg-white text-slate-800 text-xs px-4 py-1.5 rounded-full flex items-center gap-2 font-semibold shadow-sm mb-4 select-none">
-                  <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                  </svg>
-                  Apr 17, 2022
-                </div>
+                return (
+                  <div key={blog._id} className="relative rounded-sm overflow-hidden h-[480px] group shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-end p-8 border border-slate-100/50">
+                    {/* Background Image */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                      style={{
+                        backgroundImage: `url('${bannerBg}')`
+                      }}
+                    />
+                    {/* Dark overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-300 z-0" />
 
-                {/* Title */}
-                <h3 className="font-extrabold text-white text-lg sm:text-xl leading-snug group-hover:text-primary transition-colors duration-300 line-clamp-2 mb-3 cursor-pointer">
-                  Self-Guided Driving & Tours Walk Of Greater City
-                </h3>
+                    {/* Contents */}
+                    <div className="relative z-10 flex flex-col items-start w-full">
+                      {/* Date badge */}
+                      <div className="bg-white text-slate-800 text-xs px-4 py-1.5 rounded-full flex items-center gap-2 font-semibold shadow-sm mb-4 select-none">
+                        <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                        </svg>
+                        {dateStr}
+                      </div>
 
-                {/* Metadata */}
-                <div className="flex items-center gap-4 text-white/80 text-xs mb-6 font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
-                    Admin
+                      {/* Title */}
+                      <h3 className="font-extrabold text-white text-lg sm:text-xl leading-snug group-hover:text-primary transition-colors duration-300 line-clamp-2 mb-3 cursor-pointer">
+                        <Link href={`/blog/${blog._id}`}>
+                          {blog.title}
+                        </Link>
+                      </h3>
+
+                      {/* Metadata */}
+                      <div className="flex items-center gap-4 text-white/80 text-xs mb-6 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                          </svg>
+                          {blog.author || 'Admin'}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="bg-primary/80 text-white text-[10px] uppercase px-2 py-0.5 rounded font-bold">
+                            {blog.category || 'Blog'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Read More Button */}
+                      <Link 
+                        href={`/blog/${blog._id}`} 
+                        className="bg-white text-primary hover:bg-primary hover:text-white text-xs sm:text-sm font-bold uppercase tracking-wider px-8 py-3.5 transition-all duration-300 rounded-none cursor-pointer shadow-md"
+                      >
+                        Read More
+                      </Link>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 18a5.969 5.969 0 01-.474-3.65C4.58 13.09 4 11.24 4 9.75 4 5.194 8.03 1.5 13 1.5s9 3.694 9 8.25z" />
-                    </svg>
-                    0 Comment
-                  </div>
-                </div>
-
-                {/* Read More Button */}
-                <button className="bg-white text-primary hover:bg-primary hover:text-white text-xs sm:text-sm font-bold uppercase tracking-wider px-8 py-3.5 transition-all duration-300 rounded-none cursor-pointer shadow-md">
-                  Read More
-                </button>
-              </div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="relative rounded-sm overflow-hidden h-[480px] group shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-end p-8 border border-slate-100/50">
-              {/* Background Image */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                style={{
-                  backgroundImage: "url('https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&h=800&q=80')"
-                }}
-              />
-              {/* Dark overlay gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-300 z-0" />
-
-              {/* Contents */}
-              <div className="relative z-10 flex flex-col items-start w-full">
-                {/* Date badge */}
-                <div className="bg-white text-slate-800 text-xs px-4 py-1.5 rounded-full flex items-center gap-2 font-semibold shadow-sm mb-4 select-none">
-                  <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                  </svg>
-                  Apr 16, 2022
-                </div>
-
-                {/* Title */}
-                <h3 className="font-extrabold text-white text-lg sm:text-xl leading-snug group-hover:text-primary transition-colors duration-300 line-clamp-2 mb-3 cursor-pointer">
-                  Assistance For Homes & Properties Real Estate
-                </h3>
-
-                {/* Metadata */}
-                <div className="flex items-center gap-4 text-white/80 text-xs mb-6 font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
-                    Admin
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 18a5.969 5.969 0 01-.474-3.65C4.58 13.09 4 11.24 4 9.75 4 5.194 8.03 1.5 13 1.5s9 3.694 9 8.25z" />
-                    </svg>
-                    4 Comment
-                  </div>
-                </div>
-
-                {/* Read More Button */}
-                <button className="bg-white text-primary hover:bg-primary hover:text-white text-xs sm:text-sm font-bold uppercase tracking-wider px-8 py-3.5 transition-all duration-300 rounded-none cursor-pointer shadow-md">
-                  Read More
-                </button>
-              </div>
-            </div>
-
-            {/* Card 3 */}
-            <div className="relative rounded-sm overflow-hidden h-[480px] group shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-end p-8 border border-slate-100/50">
-              {/* Background Image */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                style={{
-                  backgroundImage: "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=600&h=800&q=80')"
-                }}
-              />
-              {/* Dark overlay gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent opacity-90 group-hover:opacity-95 transition-opacity duration-300 z-0" />
-
-              {/* Contents */}
-              <div className="relative z-10 flex flex-col items-start w-full">
-                {/* Date badge */}
-                <div className="bg-white text-slate-800 text-xs px-4 py-1.5 rounded-full flex items-center gap-2 font-semibold shadow-sm mb-4 select-none">
-                  <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                  </svg>
-                  Apr 15, 2022
-                </div>
-
-                {/* Title */}
-                <h3 className="font-extrabold text-white text-lg sm:text-xl leading-snug group-hover:text-primary transition-colors duration-300 line-clamp-2 mb-3 cursor-pointer">
-                  Long-Term Vision Of Health & Attractive Facility
-                </h3>
-
-                {/* Metadata */}
-                <div className="flex items-center gap-4 text-white/80 text-xs mb-6 font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
-                    Admin
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 18a5.969 5.969 0 01-.474-3.65C4.58 13.09 4 11.24 4 9.75 4 5.194 8.03 1.5 13 1.5s9 3.694 9 8.25z" />
-                    </svg>
-                    1 Comment
-                  </div>
-                </div>
-
-                {/* Read More Button */}
-                <button className="bg-white text-primary hover:bg-primary hover:text-white text-xs sm:text-sm font-bold uppercase tracking-wider px-8 py-3.5 transition-all duration-300 rounded-none cursor-pointer shadow-md">
-                  Read More
-                </button>
-              </div>
-            </div>
-
+                );
+              })}
           </div>
+
 
         </div>
 
@@ -1045,26 +978,39 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="bg-white p-5 rounded-lg border border-slate-200">
-            <h4 className="font-bold text-slate-900 text-sm sm:text-base">What are the requirements to open an account?</h4>
-            <p className="text-slate-500 text-xs sm:text-sm font-light mt-2 leading-relaxed">
-              To open an account, you only need to complete our registration process and upload a valid government ID or passport copy in the dashboard KYC section. Verification usually takes less than 24 hours.
-            </p>
-          </div>
-          <div className="bg-white p-5 rounded-lg border border-slate-200">
-            <h4 className="font-bold text-slate-900 text-sm sm:text-base">How does the wire transfer clearance system work?</h4>
-            <p className="text-slate-500 text-xs sm:text-sm font-light mt-2 leading-relaxed">
-              When processing large international wire transfers, standard regulatory clearance is required. In some cases, the system requires Transaction Authorization Codes (TAC) or IMF Clearance codes which are emailed to you or set by your account manager.
-            </p>
-          </div>
-          <div className="bg-white p-5 rounded-lg border border-slate-200">
-            <h4 className="font-bold text-slate-900 text-sm sm:text-base">Are there any monthly maintenance fees?</h4>
-            <p className="text-slate-500 text-xs sm:text-sm font-light mt-2 leading-relaxed">
-              No. Access National Bank offers free checking and multi-currency savings accounts. We only charge standard network fees on international outbound wire transfers.
-            </p>
-          </div>
+          {faqs.length > 0 ? (
+            faqs.map((faq: any) => (
+              <div key={faq._id || faq.id || faq.question} className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                {faq.category && (
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">
+                    {faq.category}
+                  </span>
+                )}
+                <h4 className="font-bold text-slate-900 text-sm sm:text-base">{faq.question}</h4>
+                <p className="text-slate-500 text-xs sm:text-sm font-light mt-2 leading-relaxed">
+                  {faq.answer}
+                </p>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="bg-white p-5 rounded-lg border border-slate-200">
+                <h4 className="font-bold text-slate-900 text-sm sm:text-base">What are the requirements to open an account?</h4>
+                <p className="text-slate-500 text-xs sm:text-sm font-light mt-2 leading-relaxed">
+                  To open an account, you only need to complete our registration process and upload a valid government ID or passport copy in the dashboard KYC section. Verification usually takes less than 24 hours.
+                </p>
+              </div>
+              <div className="bg-white p-5 rounded-lg border border-slate-200">
+                <h4 className="font-bold text-slate-900 text-sm sm:text-base">How does the wire transfer clearance system work?</h4>
+                <p className="text-slate-500 text-xs sm:text-sm font-light mt-2 leading-relaxed">
+                  When processing large international wire transfers, standard regulatory clearance is required. In some cases, the system requires Transaction Authorization Codes (TAC) or IMF Clearance codes which are emailed to you or set by your account manager.
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </section>
+
 
       {/* 10. Contact Section */}
       <section id="contact" className="bg-slate-50/50 py-24 border-t border-slate-200/60 relative overflow-hidden">

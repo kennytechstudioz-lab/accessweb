@@ -128,10 +128,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* 1. Sidebar Panel */}
       <aside className="w-64 bg-primary text-white flex flex-col justify-between h-full select-none shadow-xl relative z-30">
         <div className="overflow-y-auto flex-1 scrollbar-thin">
-          {/* Header */}
-          <div className="h-20 flex items-center px-6 gap-2 text-white font-black text-lg">
-            <Landmark size={24} className="text-white animate-pulse" />
-            <span>Admin <span className="font-light text-red-100">Console</span></span>
+          <div className="h-20 flex items-center px-6 border-b border-red-800">
+            <Link href="/">
+              <img src="/images/AccessWhiteLogo.png" alt="Access National Bank" className="h-8 w-auto object-contain hover:opacity-80 transition-opacity" />
+            </Link>
           </div>
 
           {/* Links */}

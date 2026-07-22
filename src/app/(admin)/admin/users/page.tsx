@@ -11,7 +11,9 @@ import {
   DollarSign, 
   FileText, 
   CheckSquare,
-  X
+  X,
+  ArrowRightLeft,
+  Send
 } from 'lucide-react';
 import { useUsersStore } from '@/store/usersStore';
 import { useToastStore } from '@/store/toastStore';
@@ -24,13 +26,31 @@ export default function UsersAdminPage() {
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Selected user for editing (Modal state)
+  // Selected user for details editing (Modal state)
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedUserAccounts, setSelectedUserAccounts] = useState<any[]>([]);
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form states for modal
+  // Selected user for transaction dispatch (Modal state)
+  const [selectedTxUser, setSelectedTxUser] = useState<any>(null);
+  const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [submittingTx, setSubmittingTx] = useState(false);
+
+  const [txForm, setTxForm] = useState({
+    username: '',
+    amount: '',
+    transactionType: 'Credit',
+    currency: 'USD',
+    description: '',
+    senderName: '',
+    receiverName: '',
+    receiverBank: '',
+    receiverAccountNumber: '',
+    status: 'Approved',
+  });
+
+  // Form states for profile editing
   const [editForm, setEditForm] = useState({
     fullName: '',
     email: '',
@@ -92,7 +112,6 @@ export default function UsersAdminPage() {
       const accountsList = data.accounts || [];
       setSelectedUserAccounts(accountsList);
       
-      // Initialize balances dictionary state
       const initialBals: Record<string, number> = {};
       accountsList.forEach((acc: any) => {
         initialBals[acc.currency] = acc.balance;
@@ -100,6 +119,39 @@ export default function UsersAdminPage() {
       setAccountBalances(initialBals);
     } catch (e) {
       console.error('Error fetching user accounts:', e);
+    }
+  };
+
+  const handleStartTx = (user: any) => {
+    setSelectedTxUser(user);
+    setTxForm({
+      username: user.username,
+      amount: '',
+      transactionType: 'Credit',
+      currency: 'USD',
+      description: 'System Manual Adjustment Entry',
+      senderName: 'System Admin',
+      receiverName: user.fullName || user.username,
+      receiverBank: 'Access National Bank',
+      receiverAccountNumber: user.accountNumber || '',
+      status: 'Approved',
+    });
+    setIsTxModalOpen(true);
+  };
+
+  const handleCreateTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingTx(true);
+
+    try {
+      await api.post('/admin/transactions', txForm);
+      showToast(`Transaction logged for @${txForm.username} successfully.`, 'success');
+      setIsTxModalOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      showToast(err.message || 'Error executing transaction clearance.', 'error');
+    } finally {
+      setSubmittingTx(false);
     }
   };
 
@@ -165,7 +217,6 @@ export default function UsersAdminPage() {
       
       if (updatedCount > 0) {
         showToast('Ledger accounts updated successfully.', 'success');
-        // Refresh accounts list
         const accountsData = await api.get(`/admin/users/${selectedUser.username}`);
         const freshList = accountsData.accounts || [];
         setSelectedUserAccounts(freshList);
@@ -203,7 +254,7 @@ export default function UsersAdminPage() {
       <div className="flex h-[50vh] items-center justify-center bg-slate-100 text-slate-800">
         <div className="flex flex-col items-center gap-3">
           <Landmark size={36} className="animate-spin text-primary" />
-          <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Syncing Client Logs...</span>
+          <span className="text-slate-555 text-xs font-semibold uppercase tracking-wider">Syncing Client Logs...</span>
         </div>
       </div>
     );
@@ -256,11 +307,16 @@ export default function UsersAdminPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredUsers.map((user, idx) => {
-                  const dateStr = user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, {
+                  const createdDate = user.createdAt ? new Date(user.createdAt) : null;
+                  const dateStr = createdDate ? createdDate.toLocaleDateString(undefined, {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric'
                   }) : 'N/A';
+                  const timeStr = createdDate ? createdDate.toLocaleTimeString(undefined, {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : '';
 
                   return (
                     <tr key={user._id} className="hover:bg-slate-50 transition-colors">
@@ -278,9 +334,14 @@ export default function UsersAdminPage() {
                       </td>
                       <td className="py-4 font-semibold text-slate-700">{user.fullName || 'N/A'}</td>
                       <td className="py-4 text-slate-600">{user.email}</td>
-                      <td className="py-4 text-slate-500 font-mono font-light">{dateStr}</td>
+                      <td className="py-4 font-mono font-light">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-slate-800 font-bold">{timeStr}</span>
+                          <span className="text-slate-400 text-[10px]">{dateStr}</span>
+                        </div>
+                      </td>
                       <td className="py-4">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-col gap-1.5 items-start">
                           <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase ${
                             user.suspended ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                           }`}>
@@ -297,6 +358,13 @@ export default function UsersAdminPage() {
                       </td>
                       <td className="py-4 text-right">
                         <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => handleStartTx(user)}
+                            className="p-2 text-slate-450 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                            title="Inject Direct Transaction"
+                          >
+                            <ArrowRightLeft size={15} />
+                          </button>
                           <button
                             onClick={() => handleStartEdit(user)}
                             className="p-2 text-slate-450 hover:text-primary hover:bg-red-50 rounded transition-colors cursor-pointer"
@@ -321,6 +389,170 @@ export default function UsersAdminPage() {
           </div>
         )}
       </div>
+
+      {/* Manual Custom Transaction injection Modal (for specific user) */}
+      {isTxModalOpen && selectedTxUser && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-slideIn">
+            
+            {/* Header */}
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <ArrowRightLeft size={18} className="text-primary animate-pulse" />
+                <span>Inject Transaction for @{selectedTxUser.username}</span>
+              </h3>
+              <button
+                onClick={() => setIsTxModalOpen(false)}
+                className="text-slate-400 hover:text-slate-655 cursor-pointer p-1 rounded-full hover:bg-slate-200 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCreateTransaction}>
+              <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Transaction Type</label>
+                    <select
+                      value={txForm.transactionType}
+                      onChange={(e) => setTxForm({ ...txForm, transactionType: e.target.value })}
+                      className="border border-slate-200 rounded px-2.5 py-2.5 text-xs bg-slate-50 text-slate-750 focus:outline-none focus:border-primary font-semibold"
+                    >
+                      <option value="Credit">Credit</option>
+                      <option value="Debit">Debit</option>
+                      <option value="Local-Transfer">Local Transfer</option>
+                      <option value="Domestic-Wire">Domestic Wire</option>
+                      <option value="International-Wire">International Wire</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Currency</label>
+                    <select
+                      value={txForm.currency}
+                      onChange={(e) => setTxForm({ ...txForm, currency: e.target.value })}
+                      className="border border-slate-200 rounded px-2.5 py-2.5 text-xs bg-slate-50 text-slate-750 focus:outline-none focus:border-primary font-semibold"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="CAD">CAD ($)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Transaction Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="0.00"
+                      value={txForm.amount}
+                      onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })}
+                      className="border border-slate-200 rounded px-3.5 py-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:border-primary font-mono font-bold"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Clearance Status</label>
+                    <select
+                      value={txForm.status}
+                      onChange={(e) => setTxForm({ ...txForm, status: e.target.value })}
+                      className="border border-slate-200 rounded px-2.5 py-2.5 text-xs bg-slate-50 text-slate-750 focus:outline-none focus:border-primary font-semibold"
+                    >
+                      <option value="Approved">Approved</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Failed">Failed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Sender Name</label>
+                    <input
+                      type="text"
+                      value={txForm.senderName}
+                      onChange={(e) => setTxForm({ ...txForm, senderName: e.target.value })}
+                      placeholder="e.g. Bank Deposit Desk"
+                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Receiver Name</label>
+                    <input
+                      type="text"
+                      value={txForm.receiverName}
+                      onChange={(e) => setTxForm({ ...txForm, receiverName: e.target.value })}
+                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Receiver Bank Name</label>
+                    <input
+                      type="text"
+                      value={txForm.receiverBank}
+                      onChange={(e) => setTxForm({ ...txForm, receiverBank: e.target.value })}
+                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-650 uppercase">Receiver Acc Number</label>
+                    <input
+                      type="text"
+                      value={txForm.receiverAccountNumber}
+                      onChange={(e) => setTxForm({ ...txForm, receiverAccountNumber: e.target.value })}
+                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Description / Memo</label>
+                  <input
+                    type="text"
+                    required
+                    value={txForm.description}
+                    onChange={(e) => setTxForm({ ...txForm, description: e.target.value })}
+                    className="border border-slate-200 rounded px-3.5 py-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+              </div>
+
+              {/* Footer */}
+              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsTxModalOpen(false)}
+                  className="px-4 py-2.5 rounded border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingTx}
+                  className="bg-primary hover:bg-primary-hover text-white font-bold text-xs px-5 py-2.5 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Send size={12} />
+                  <span>{submittingTx ? 'Processing...' : 'Create Entry'}</span>
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
 
       {/* Edit User Modal Dialog overlay */}
       {isModalOpen && selectedUser && (

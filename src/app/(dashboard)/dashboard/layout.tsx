@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Landmark, LayoutDashboard, ArrowRightLeft, CreditCard, ShieldCheck, LogOut, User, Menu, X } from 'lucide-react';
+import SmartSuppWidget from '@/components/SmartSuppWidget';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -61,10 +62,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       
       {/* 1. Sidebar - Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-secondary text-slate-350 border-r border-slate-800">
-        {/* Sidebar Header */}
-        <div className="h-20 flex items-center px-6 border-b border-slate-850 gap-2 text-white font-bold text-lg">
-          <Landmark size={24} className="text-primary animate-pulse" />
-          <span>Access <span className="text-primary">National</span></span>
+        <div className="h-20 flex items-center px-6 border-b border-slate-850">
+          <img src="/images/AccessWhiteLogo.png" alt="Access National Bank" className="h-8 w-auto object-contain" />
         </div>
 
         {/* Sidebar Nav */}
@@ -162,11 +161,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 md:hidden flex">
           <aside className="w-64 bg-secondary text-slate-350 flex flex-col h-full animate-slideIn">
-            <div className="h-20 flex items-center justify-between px-6 border-b border-slate-850 text-white font-bold text-lg">
-              <div className="flex items-center gap-2">
-                <Landmark size={24} className="text-primary" />
-                <span>Access National</span>
-              </div>
+            <div className="h-20 flex items-center justify-between px-6 border-b border-slate-850">
+              <img src="/images/AccessWhiteLogo.png" alt="Access National Bank" className="h-8 w-auto object-contain" />
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="text-slate-400 hover:text-white cursor-pointer"
@@ -215,6 +211,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
+      <SmartSuppWidget />
     </div>
   );
 }

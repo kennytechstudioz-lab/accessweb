@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Landmark, Save } from 'lucide-react';
+import { Landmark, Save, Lock, Eye, EyeOff } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useToastStore } from '@/store/toastStore';
 import { api } from '@/util/api';
@@ -26,6 +26,9 @@ export default function CompanySettingsPage() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [pwSubmitting, setPwSubmitting] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -63,6 +66,24 @@ export default function CompanySettingsPage() {
       showToast(err.message || 'Error updating settings.', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      showToast('Password must be at least 6 characters.', 'error');
+      return;
+    }
+    setPwSubmitting(true);
+    try {
+      await api.put('/admin/change-password', { password: newPassword });
+      showToast('Password updated successfully!', 'success');
+      setNewPassword('');
+    } catch (err: any) {
+      showToast(err.message || 'Error updating password.', 'error');
+    } finally {
+      setPwSubmitting(false);
     }
   };
 
@@ -233,6 +254,62 @@ export default function CompanySettingsPage() {
             <span>{submitting ? 'Updating Settings...' : 'Save Settings Details'}</span>
           </button>
 
+        </form>
+      </div>
+
+      {/* Change Password */}
+      <div className="flex flex-col gap-1 mt-2">
+        <h2 className="text-xl font-extrabold text-slate-900 uppercase tracking-tight">Admin Password</h2>
+        <p className="text-slate-550 text-xs font-light">Update the password for the currently logged-in admin account.</p>
+      </div>
+
+      <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+        <form onSubmit={handleChangePassword} className="flex flex-col gap-6">
+          <div>
+            <h3 className="text-xs font-bold text-slate-855 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">
+              Change Login Password
+            </h3>
+            <div className="flex flex-col gap-3 max-w-sm">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-500">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3.5 py-2.5 pr-10 text-xs text-slate-800 focus:outline-none focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <p className={`text-[10px] font-semibold mt-0.5 ${
+                  newPassword.length === 0 ? 'text-slate-400' :
+                  newPassword.length < 6 ? 'text-red-500' : 'text-green-600'
+                }`}>
+                  {newPassword.length === 0
+                    ? 'Minimum 6 characters required'
+                    : newPassword.length < 6
+                    ? `${6 - newPassword.length} more character${6 - newPassword.length > 1 ? 's' : ''} needed`
+                    : '✓ Password meets requirements'}
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={pwSubmitting || newPassword.length < 6}
+                className="bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg text-xs transition-colors flex items-center gap-2 cursor-pointer self-start"
+              >
+                <Lock size={14} />
+                <span>{pwSubmitting ? 'Updating Password...' : 'Update Password'}</span>
+              </button>
+            </div>
+          </div>
         </form>
       </div>
     </div>
