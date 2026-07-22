@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+export PATH=$PATH:/usr/local/bin:~/.npm-global/bin
+
 echo "=============================="
 echo "  Access Web — Auto Deploy"
 echo "=============================="
@@ -20,7 +24,8 @@ echo "[4/5] Building Next.js app..."
 npm run build
 
 echo "[5/5] Restarting PM2 process: access-web..."
-pm2 restart access-web
+pm2 restart access-web || npx pm2 restart access-web
 
 echo ""
 echo "✅ Access Web deployed successfully!"
+
