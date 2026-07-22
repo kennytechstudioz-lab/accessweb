@@ -18,6 +18,7 @@ import {
   Menu
 } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
+import WebSocketListener from '@/components/WebSocketListener';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -406,6 +407,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       )}
 
+      <WebSocketListener role="admin" />
     </div>
   );
 }

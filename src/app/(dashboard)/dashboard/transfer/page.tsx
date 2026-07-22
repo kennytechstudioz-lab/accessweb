@@ -289,12 +289,18 @@ export default function Transfer() {
       {/* Page Title */}
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-extrabold text-slate-900 uppercase tracking-tight">
-          {transferType === 'internal' ? 'Internal Account Wire Dispatch' : 'Outbound Money Dispatch'}
+          {transferType === 'internal' 
+            ? 'Internal Account Wire Dispatch' 
+            : transferType === 'local' 
+            ? 'Local Bank Transfer Dispatch' 
+            : 'International Wire Dispatch'}
         </h2>
         <p className="text-slate-500 text-xs font-light">
           {transferType === 'internal' 
             ? 'Transfer funds instantly to another Access National Bank account holder.' 
-            : 'Transfer funds to local external bank accounts or international wire destinations.'}
+            : transferType === 'local' 
+            ? 'Transfer funds securely to other local financial institutions.' 
+            : 'Transfer funds across international bank networks with SWIFT / IBAN clearance.'}
         </p>
       </div>
 
@@ -312,36 +318,6 @@ export default function Transfer() {
         
         {/* Main Form */}
         <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-6">
-          
-          {/* If NOT internal transfer, show tab switcher. If internal transfer, hide other transfer type tabs! */}
-          {urlType !== 'internal' && (
-            <div className="flex bg-slate-50 border border-slate-100 p-1.5 rounded-xl text-xs font-bold gap-1">
-              <button
-                onClick={() => setTransferType('internal')}
-                className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
-                  transferType === 'internal' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Internal Transfer
-              </button>
-              <button
-                onClick={() => setTransferType('local')}
-                className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
-                  transferType === 'local' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Local Bank Transfer
-              </button>
-              <button
-                onClick={() => setTransferType('wire')}
-                className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
-                  transferType === 'wire' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                International Wire
-              </button>
-            </div>
-          )}
 
           <form onSubmit={handleProceedClick} className="flex flex-col gap-6">
             

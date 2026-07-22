@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Suspense } from 'react';
 import SmartSuppWidget from '@/components/SmartSuppWidget';
+import WebSocketListener from '@/components/WebSocketListener';
 import { useToastStore } from '@/store/toastStore';
 import { useNotificationsStore } from '@/store/notificationsStore';
 import { useSearchParams } from 'next/navigation';
@@ -326,6 +327,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       <SmartSuppWidget />
+      <WebSocketListener username={currentUser?.username} />
     </div>
   );
 }
