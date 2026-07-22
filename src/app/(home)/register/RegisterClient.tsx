@@ -44,8 +44,8 @@ export default function RegisterClient() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect to registration success page
+      router.push('/register/success');
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please review your details.');
     } finally {
