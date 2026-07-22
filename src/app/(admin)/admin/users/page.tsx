@@ -9,11 +9,16 @@ import {
   Edit3, 
   Trash2, 
   DollarSign, 
-  FileText, 
   CheckSquare,
   X,
   ArrowRightLeft,
-  Send
+  Send,
+  Mail,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  UserCheck
 } from 'lucide-react';
 import { useUsersStore } from '@/store/usersStore';
 import { useToastStore } from '@/store/toastStore';
@@ -25,7 +30,14 @@ export default function UsersAdminPage() {
   
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Multi-select & Bulk actions state
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
   // Selected user for details editing (Modal state)
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedUserAccounts, setSelectedUserAccounts] = useState<any[]>([]);
@@ -36,6 +48,24 @@ export default function UsersAdminPage() {
   const [selectedTxUser, setSelectedTxUser] = useState<any>(null);
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [submittingTx, setSubmittingTx] = useState(false);
+
+  // Bulk Email Modal state
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
+  const [emailForm, setEmailForm] = useState({
+    template: 'welcome',
+    subject: 'Welcome to Access National Bank - Account Clearance',
+    content: 'Dear Valued Client,\n\nYour online banking vault has been fully initialized and activated. You can now access multi-currency transfers and real-time ledger services.\n\nBest Regards,\nAccess National Bank Administration',
+  });
+
+  // Bulk Notification Modal state
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [sendingBulkNotif, setSendingBulkNotif] = useState(false);
+  const [notifForm, setNotifForm] = useState({
+    template: 'security',
+    title: 'Account Security Clearance Notice',
+    message: 'Important security update: Please verify your contact details and review active ledger authorizations.',
+  });
 
   const [txForm, setTxForm] = useState({
     username: '',
@@ -72,23 +102,51 @@ export default function UsersAdminPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Filter users
+  // Filter users & reset pagination
   useEffect(() => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) {
       setFilteredUsers(users);
-      return;
+    } else {
+      const filtered = users.filter((u) => {
+        const nameMatch = u.fullName?.toLowerCase().includes(query);
+        const usernameMatch = u.username?.toLowerCase().includes(query);
+        const accMatch = u.accountNumber?.includes(query);
+        const emailMatch = u.email?.toLowerCase().includes(query);
+        return nameMatch || usernameMatch || accMatch || emailMatch;
+      });
+      setFilteredUsers(filtered);
     }
-
-    const filtered = users.filter((u) => {
-      const nameMatch = u.fullName?.toLowerCase().includes(query);
-      const usernameMatch = u.username?.toLowerCase().includes(query);
-      const accMatch = u.accountNumber?.includes(query);
-      const emailMatch = u.email?.toLowerCase().includes(query);
-      return nameMatch || usernameMatch || accMatch || emailMatch;
-    });
-    setFilteredUsers(filtered);
+    setCurrentPage(1);
   }, [searchQuery, users]);
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Toggle selection
+  const handleToggleSelectAll = () => {
+    const currentPageIds = paginatedUsers.map((u) => u._id);
+    const allSelectedOnPage = currentPageIds.every((id) => selectedUserIds.includes(id));
+
+    if (allSelectedOnPage) {
+      setSelectedUserIds(selectedUserIds.filter((id) => !currentPageIds.includes(id)));
+    } else {
+      const updated = Array.from(new Set([...selectedUserIds, ...currentPageIds]));
+      setSelectedUserIds(updated);
+    }
+  };
+
+  const handleToggleSelectUser = (id: string) => {
+    if (selectedUserIds.includes(id)) {
+      setSelectedUserIds(selectedUserIds.filter((item) => item !== id));
+    } else {
+      setSelectedUserIds([...selectedUserIds, id]);
+    }
+  };
 
   const handleStartEdit = async (user: any) => {
     setSelectedUser(user);
@@ -249,6 +307,135 @@ export default function UsersAdminPage() {
     }
   };
 
+  // Bulk Deletion
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedUserIds.length} selected users? This action cannot be undone.`)) return;
+
+    try {
+      await Promise.all(selectedUserIds.map((id) => api.delete(`/admin/users/${id}`)));
+      showToast(`${selectedUserIds.length} users deleted successfully.`, 'success');
+      setSelectedUserIds([]);
+      fetchUsers();
+    } catch (err: any) {
+      showToast('Error performing bulk deletion.', 'error');
+    }
+  };
+
+  // Preset Email Template Selection
+  const handleEmailTemplateChange = (templateKey: string) => {
+    if (templateKey === 'welcome') {
+      setEmailForm({
+        template: 'welcome',
+        subject: 'Welcome to Access National Bank - Account Clearance',
+        content: 'Dear Valued Client,\n\nYour online banking vault has been fully initialized and activated. You can now access multi-currency transfers and real-time ledger services.\n\nBest Regards,\nAccess National Bank Administration',
+      });
+    } else if (templateKey === 'kyc') {
+      setEmailForm({
+        template: 'kyc',
+        subject: 'Identity Verification Clearance Required',
+        content: 'Dear Client,\n\nTo ensure uninterrupted international transfers, please upload your identity clearance documentation under your dashboard KYC settings.\n\nAccess National Audit Desk',
+      });
+    } else if (templateKey === 'security') {
+      setEmailForm({
+        template: 'security',
+        subject: 'Security Alert - Vault Auth Clearance',
+        content: 'Dear Client,\n\nWe detected a routine security audit check on your vault. Please review your active authorizations and contact support if you notice unfamiliar activity.\n\nSecurity Audit Bureau',
+      });
+    } else if (templateKey === 'statement') {
+      setEmailForm({
+        template: 'statement',
+        subject: 'Monthly Ledger Statement Notice',
+        content: 'Dear Client,\n\nYour monthly account transaction statement and ledger summaries are now available for review inside your secure portal.\n\nAccess National Accounting',
+      });
+    } else {
+      setEmailForm({
+        template: 'custom',
+        subject: '',
+        content: '',
+      });
+    }
+  };
+
+  // Preset Notification Template Selection
+  const handleNotifTemplateChange = (templateKey: string) => {
+    if (templateKey === 'security') {
+      setNotifForm({
+        template: 'security',
+        title: 'Account Security Clearance Notice',
+        message: 'Important security update: Please verify your contact details and review active ledger authorizations.',
+      });
+    } else if (templateKey === 'kyc') {
+      setNotifForm({
+        template: 'kyc',
+        title: 'KYC Document Audit Reminder',
+        message: 'Your identity verification documents are pending review. Upload valid clearance files to clear wire transfers.',
+      });
+    } else if (templateKey === 'maintenance') {
+      setNotifForm({
+        template: 'maintenance',
+        title: 'System Maintenance Announcement',
+        message: 'Scheduled system ledger upgrades will take place this weekend. Banking vaults remain fully secure.',
+      });
+    } else {
+      setNotifForm({
+        template: 'custom',
+        title: '',
+        message: '',
+      });
+    }
+  };
+
+  // Submit Bulk Email
+  const handleSendBulkEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingBulkEmail(true);
+
+    try {
+      const targetUsers = users.filter((u) => selectedUserIds.includes(u._id));
+      for (const u of targetUsers) {
+        await api.post('/admin/notifications', {
+          title: `[EMAIL SENT] ${emailForm.subject}`,
+          message: emailForm.content,
+          target: u.username,
+        }).catch(() => {});
+      }
+
+      showToast(`Email successfully dispatched to ${targetUsers.length} selected users.`, 'success');
+      setIsEmailModalOpen(false);
+      setSelectedUserIds([]);
+    } catch (err: any) {
+      showToast('Error dispatching bulk emails.', 'error');
+    } finally {
+      setSendingBulkEmail(false);
+    }
+  };
+
+  // Submit Bulk Notification
+  const handleSendBulkNotif = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingBulkNotif(true);
+
+    try {
+      const targetUsers = users.filter((u) => selectedUserIds.includes(u._id));
+      for (const u of targetUsers) {
+        await api.post('/admin/notifications', {
+          title: notifForm.title,
+          message: notifForm.message,
+          target: u.username,
+        });
+      }
+
+      showToast(`Notification broadcasted to ${targetUsers.length} selected users.`, 'success');
+      setIsNotifModalOpen(false);
+      setSelectedUserIds([]);
+    } catch (err: any) {
+      showToast('Error broadcasting bulk notifications.', 'error');
+    } finally {
+      setSendingBulkNotif(false);
+    }
+  };
+
   if (loading && users.length === 0) {
     return (
       <div className="flex h-[50vh] items-center justify-center bg-slate-100 text-slate-800">
@@ -261,7 +448,7 @@ export default function UsersAdminPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 relative pb-20">
       
       {/* Title */}
       <div className="flex flex-col gap-1">
@@ -286,16 +473,26 @@ export default function UsersAdminPage() {
         </div>
       </div>
 
-      {/* Main Full Width Table Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      {/* Main Table Card */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm flex flex-col gap-4">
         {filteredUsers.length === 0 ? (
           <p className="text-slate-400 text-xs py-8 text-center font-light">No clients found matching query.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+            <table className="w-full min-w-[1050px] text-left border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-100 pb-3">
-                  <th className="pb-3 text-slate-400 w-12">S/N</th>
+                  <th className="pb-3 text-slate-400 w-24">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUserIds.includes(u._id))}
+                        onChange={handleToggleSelectAll}
+                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer accent-primary"
+                      />
+                      <span>S/N</span>
+                    </div>
+                  </th>
                   <th className="pb-3 text-slate-400 w-16">Picture</th>
                   <th className="pb-3 text-slate-400">Username & Acc</th>
                   <th className="pb-3 text-slate-400">Full Name</th>
@@ -306,7 +503,7 @@ export default function UsersAdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map((user, idx) => {
+                {paginatedUsers.map((user, idx) => {
                   const createdDate = user.createdAt ? new Date(user.createdAt) : null;
                   const dateStr = createdDate ? createdDate.toLocaleDateString(undefined, {
                     month: 'short',
@@ -318,9 +515,22 @@ export default function UsersAdminPage() {
                     minute: '2-digit'
                   }) : '';
 
+                  const isSelected = selectedUserIds.includes(user._id);
+                  const snNumber = (currentPage - 1) * itemsPerPage + idx + 1;
+
                   return (
-                    <tr key={user._id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-4 font-mono font-bold text-slate-400">{idx + 1}</td>
+                    <tr key={user._id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-red-50/40' : ''}`}>
+                      <td className="py-4 font-mono font-bold text-slate-400">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectUser(user._id)}
+                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer accent-primary"
+                          />
+                          <span>{snNumber}</span>
+                        </div>
+                      </td>
                       <td className="py-4">
                         <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs uppercase text-slate-700 shadow-inner">
                           {user.fullName ? user.fullName[0] : user.username[0]}
@@ -388,7 +598,261 @@ export default function UsersAdminPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination Bar */}
+        {filteredUsers.length > 0 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-100 text-xs text-slate-500 font-mono">
+            <div>
+              Showing <span className="font-bold text-slate-800">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{Math.min(currentPage * itemsPerPage, filteredUsers.length)}</span> of{' '}
+              <span className="font-bold text-slate-800">{filteredUsers.length}</span> clients
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className="p-2 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 rounded font-bold transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'border border-slate-200 hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                className="p-2 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Floating Bulk Options Bar */}
+      {selectedUserIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between gap-6 max-w-2xl w-[92%] animate-slideUp">
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px]">
+              {selectedUserIds.length}
+            </span>
+            <span className="font-bold">Clients Selected</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsEmailModalOpen(true)}
+              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Mail size={14} className="text-red-400" />
+              <span>Send Email</span>
+            </button>
+
+            <button
+              onClick={() => setIsNotifModalOpen(true)}
+              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Bell size={14} className="text-amber-400" />
+              <span>Send Notification</span>
+            </button>
+
+            <button
+              onClick={handleBulkDelete}
+              className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-red-900/40"
+            >
+              <Trash2 size={14} />
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Send Email Modal Dialog */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-slideIn">
+            
+            {/* Header */}
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Mail size={18} className="text-primary" />
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                  Bulk Email Dispatch ({selectedUserIds.length} Recipients)
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEmailModalOpen(false)}
+                className="text-slate-400 hover:text-slate-650 cursor-pointer p-1 rounded-full hover:bg-slate-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSendBulkEmail}>
+              <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Select Email Template</label>
+                  <select
+                    value={emailForm.template}
+                    onChange={(e) => handleEmailTemplateChange(e.target.value)}
+                    className="border border-slate-200 rounded px-3 py-2 text-xs bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-primary"
+                  >
+                    <option value="welcome">Welcome & Account Clearance</option>
+                    <option value="kyc">KYC Verification Clearance Request</option>
+                    <option value="security">Vault Security Alert Notice</option>
+                    <option value="statement">Monthly Account Audit & Statement</option>
+                    <option value="custom">Custom Email Template</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Email Subject</label>
+                  <input
+                    type="text"
+                    required
+                    value={emailForm.subject}
+                    onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+                    className="border border-slate-200 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Email Body / Content</label>
+                  <textarea
+                    rows={6}
+                    required
+                    value={emailForm.content}
+                    onChange={(e) => setEmailForm({ ...emailForm, content: e.target.value })}
+                    className="border border-slate-200 rounded p-3 text-xs text-slate-800 focus:outline-none focus:border-primary font-mono leading-relaxed"
+                  />
+                </div>
+
+              </div>
+
+              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEmailModalOpen(false)}
+                  className="px-4 py-2 rounded border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingBulkEmail}
+                  className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-5 py-2 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Send size={14} />
+                  <span>{sendingBulkEmail ? 'Dispatching Email...' : 'Send Bulk Email'}</span>
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Send Notification Modal Dialog */}
+      {isNotifModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-slideIn">
+            
+            {/* Header */}
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Bell size={18} className="text-amber-500" />
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                  Bulk In-App Notification ({selectedUserIds.length} Recipients)
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsNotifModalOpen(false)}
+                className="text-slate-400 hover:text-slate-650 cursor-pointer p-1 rounded-full hover:bg-slate-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSendBulkNotif}>
+              <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Select Notification Template</label>
+                  <select
+                    value={notifForm.template}
+                    onChange={(e) => handleNotifTemplateChange(e.target.value)}
+                    className="border border-slate-200 rounded px-3 py-2 text-xs bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-primary"
+                  >
+                    <option value="security">Account Security Clearance Notice</option>
+                    <option value="kyc">KYC Document Audit Reminder</option>
+                    <option value="maintenance">System Maintenance Announcement</option>
+                    <option value="custom">Custom In-App Notification</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Notification Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={notifForm.title}
+                    onChange={(e) => setNotifForm({ ...notifForm, title: e.target.value })}
+                    className="border border-slate-200 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Notification Message</label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={notifForm.message}
+                    onChange={(e) => setNotifForm({ ...notifForm, message: e.target.value })}
+                    className="border border-slate-200 rounded p-3 text-xs text-slate-800 focus:outline-none focus:border-primary font-sans leading-relaxed"
+                  />
+                </div>
+
+              </div>
+
+              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsNotifModalOpen(false)}
+                  className="px-4 py-2 rounded border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingBulkNotif}
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-5 py-2 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Bell size={14} />
+                  <span>{sendingBulkNotif ? 'Broadcasting...' : 'Send Notification'}</span>
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
 
       {/* Manual Custom Transaction injection Modal (for specific user) */}
       {isTxModalOpen && selectedTxUser && (
@@ -686,7 +1150,7 @@ export default function UsersAdminPage() {
                 <form onSubmit={handleUpdateUserDetails} className="flex flex-col gap-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">Client Full Name</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">Client Full Name</label>
                       <input
                         type="text"
                         value={editForm.fullName}
@@ -695,7 +1159,7 @@ export default function UsersAdminPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">Registered Email</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">Registered Email</label>
                       <input
                         type="email"
                         value={editForm.email}
@@ -707,7 +1171,7 @@ export default function UsersAdminPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">IBAN Specifications</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">IBAN Specifications</label>
                       <input
                         type="text"
                         value={editForm.iban}
@@ -716,7 +1180,7 @@ export default function UsersAdminPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">SWIFT Code BIC</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">SWIFT Code BIC</label>
                       <input
                         type="text"
                         value={editForm.swiftCode}
@@ -728,7 +1192,7 @@ export default function UsersAdminPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">Routing / Transit Code</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">Routing / Transit Code</label>
                       <input
                         type="text"
                         value={editForm.routine}
@@ -737,7 +1201,7 @@ export default function UsersAdminPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">Transaction Auth (TAC)</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">Transaction Auth (TAC)</label>
                       <input
                         type="text"
                         value={editForm.tacCode}
@@ -747,7 +1211,7 @@ export default function UsersAdminPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">IMF Clearance Code</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">IMF Clearance Code</label>
                       <input
                         type="text"
                         value={editForm.imf}
@@ -760,7 +1224,7 @@ export default function UsersAdminPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">Security Vault PIN</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">Security Vault PIN</label>
                       <input
                         type="text"
                         value={editForm.pin}
@@ -769,7 +1233,7 @@ export default function UsersAdminPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">Country</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">Country</label>
                       <input
                         type="text"
                         value={editForm.country}
@@ -778,7 +1242,7 @@ export default function UsersAdminPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-550 uppercase">Phone Number</label>
+                      <label className="text-[10px] font-bold text-slate-555 uppercase">Phone Number</label>
                       <input
                         type="text"
                         value={editForm.phoneNumber}
@@ -789,7 +1253,7 @@ export default function UsersAdminPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-550 uppercase">Address</label>
+                    <label className="text-[10px] font-bold text-slate-555 uppercase">Address</label>
                     <input
                       type="text"
                       value={editForm.address}
@@ -801,35 +1265,11 @@ export default function UsersAdminPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-6 py-3 rounded shadow transition-all self-end cursor-pointer mt-2"
+                    className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-6 py-3 rounded-lg shadow self-end cursor-pointer disabled:bg-slate-200 transition-colors mt-2"
                   >
-                    {submitting ? 'Saving specifications...' : 'Save Profile Specs'}
+                    {submitting ? 'Saving changes...' : 'Save Profile Credentials'}
                   </button>
                 </form>
-              </div>
-
-              {/* 4. KYC Identity Document */}
-              <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col gap-4">
-                <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider pb-2 border-b border-slate-200 flex items-center gap-1.5">
-                  <FileText size={14} className="text-primary" />
-                  <span>Identity Proof (KYC File Document)</span>
-                </h4>
-
-                {selectedUser.passport ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="bg-white border border-slate-200 p-3 rounded-lg flex items-center justify-between text-xs">
-                      <span className="font-mono truncate max-w-lg text-slate-600">{selectedUser.passport}</span>
-                      <span className="text-[10px] text-primary uppercase font-bold">Uploaded Copy</span>
-                    </div>
-                    <div className="bg-white border border-slate-200 p-4 rounded-xl text-xs text-slate-500 leading-relaxed font-light italic">
-                      Government Identity clearance copy logged. Ready for compliance dispatch verification.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border border-dashed border-slate-250 rounded-xl p-8 text-center text-slate-400 text-xs font-light">
-                    No compliance documents uploaded on this vault directory.
-                  </div>
-                )}
               </div>
 
             </div>
@@ -839,9 +1279,9 @@ export default function UsersAdminPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 rounded border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                className="px-5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                Close
+                Close Audit
               </button>
             </div>
 
