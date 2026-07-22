@@ -147,7 +147,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col overflow-hidden bg-slate-100 text-slate-800">
         
         {/* Top Navbar */}
-        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-20 shadow-sm">
+        <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-[10px] sm:px-6 z-20 shadow-sm">
           <div className="flex items-center gap-3">
             {/* Mobile Drawer Toggle */}
             <button
@@ -156,8 +156,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Menu size={24} />
             </button>
-            <h2 className="font-extrabold text-slate-900 text-sm sm:text-base uppercase tracking-wider">
-              Client Vault Portal
+            <h2 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-wide">
+              Welcome, <span className="text-primary">{currentUser.fullName || currentUser.username}</span>
             </h2>
           </div>
 
@@ -167,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </span>
             
             {/* Action Icons */}
-            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+            <div className="flex items-center gap-2 border-l border-slate-200 pl-2 sm:pl-4">
               <Link 
                 href="/dashboard/notifications"
                 className="p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors cursor-pointer relative"
@@ -198,8 +198,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Main Content View (with bottom padding on mobile for sticky tabs) */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-24 md:pb-8 bg-slate-100">
+        {/* Main Content View (with 10px mobile padding for sticky tabs) */}
+        <main className="flex-1 overflow-y-auto px-[10px] py-4 sm:p-6 md:p-8 pb-24 md:pb-8 bg-slate-100">
           <div className="max-w-6xl mx-auto">
             {children}
           </div>

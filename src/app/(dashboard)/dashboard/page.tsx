@@ -2,7 +2,20 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Landmark, ArrowRightLeft, CreditCard, ShieldCheck, AlertCircle, ArrowUpRight, ArrowDownLeft, Copy, Check } from 'lucide-react';
+import { 
+  Landmark, 
+  ArrowRightLeft, 
+  CreditCard, 
+  ShieldCheck, 
+  AlertCircle, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  Copy, 
+  Check, 
+  ChevronLeft, 
+  ChevronRight, 
+  Wifi 
+} from 'lucide-react';
 
 export default function DashboardOverview() {
   const [profile, setProfile] = useState<any>(null);
@@ -10,6 +23,7 @@ export default function DashboardOverview() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -54,6 +68,45 @@ export default function DashboardOverview() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const debitCards = [
+    {
+      id: 'gold',
+      name: 'Obsidian Gold Debit',
+      category: 'VISA PLATINUM',
+      bg: 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-950',
+      border: 'border-amber-400/30',
+      textColor: 'text-amber-100',
+      brand: 'VISA',
+      cardNumber: '4829 •••• •••• 9012',
+      holder: profile?.fullName || 'ACCESS CARDHOLDER',
+      expiry: '12/28',
+    },
+    {
+      id: 'red',
+      name: 'Access Signature Red',
+      category: 'WORLD MASTERCARD',
+      bg: 'bg-gradient-to-br from-red-600 via-red-800 to-slate-950',
+      border: 'border-red-500/30',
+      textColor: 'text-red-100',
+      brand: 'Mastercard',
+      cardNumber: '5399 •••• •••• 4410',
+      holder: profile?.fullName || 'ACCESS CARDHOLDER',
+      expiry: '09/29',
+    },
+    {
+      id: 'black',
+      name: 'Executive Titanium Black',
+      category: 'AMEX DIAMOND VAULT',
+      bg: 'bg-gradient-to-br from-slate-900 via-zinc-900 to-black',
+      border: 'border-slate-700',
+      textColor: 'text-slate-200',
+      brand: 'AMEX',
+      cardNumber: '3782 •••••• 88301',
+      holder: profile?.fullName || 'ACCESS CARDHOLDER',
+      expiry: '04/30',
+    },
+  ];
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -70,7 +123,7 @@ export default function DashboardOverview() {
       
       {/* 1. KYC Warning banner if not verified */}
       {profile && !profile.isVerified && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-[10px] py-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex gap-3 items-start">
             <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -119,11 +172,11 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* 3. Account Specifications & Quick Tools */}
+      {/* 3. Account Specifications & Debit Cards Carousel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Account Details Panel */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col gap-6">
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 px-[10px] py-6 sm:p-8 shadow-sm flex flex-col gap-6">
           <h3 className="font-bold text-slate-900 text-base uppercase tracking-wider pb-3 border-b border-slate-100">
             Account Clearance Details
           </h3>
@@ -189,43 +242,108 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Quick Actions Panel */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col gap-6">
-          <h3 className="font-bold text-slate-900 text-base uppercase tracking-wider pb-3 border-b border-slate-100">
-            Quick Tools
-          </h3>
-
-          <div className="grid grid-cols-3 gap-4">
-            <Link 
-              href="/dashboard/transfer" 
-              className="flex flex-col items-center gap-2 p-4 bg-slate-50 hover:bg-red-50 hover:text-primary border border-slate-100 hover:border-primary/20 rounded-xl transition-all text-center group cursor-pointer"
-            >
-              <ArrowRightLeft size={20} className="text-slate-600 group-hover:text-primary" />
-              <span className="text-xs font-semibold">Transfer</span>
-            </Link>
-
-            <Link 
-              href="/dashboard/cards" 
-              className="flex flex-col items-center gap-2 p-4 bg-slate-50 hover:bg-red-50 hover:text-primary border border-slate-100 hover:border-primary/20 rounded-xl transition-all text-center group cursor-pointer"
-            >
-              <CreditCard size={20} className="text-slate-600 group-hover:text-primary" />
-              <span className="text-xs font-semibold">Cards</span>
-            </Link>
-
-            <Link 
-              href="/dashboard/kyc" 
-              className="flex flex-col items-center gap-2 p-4 bg-slate-50 hover:bg-red-50 hover:text-primary border border-slate-100 hover:border-primary/20 rounded-xl transition-all text-center group cursor-pointer"
-            >
-              <ShieldCheck size={20} className="text-slate-600 group-hover:text-primary" />
-              <span className="text-xs font-semibold">KYC Auth</span>
-            </Link>
+        {/* 3 Colored Debit Card Carousel Section */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 px-[10px] py-6 sm:p-8 shadow-sm flex flex-col gap-5">
+          <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+            <h3 className="font-bold text-slate-900 text-sm sm:text-base uppercase tracking-wider">
+              Debit Card Collection
+            </h3>
+            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-primary/10 text-primary">
+              {debitCards[activeCardIndex].category}
+            </span>
           </div>
+
+          {/* Carousel Card Display */}
+          <div className="relative group">
+            <div className={`w-full h-48 sm:h-52 rounded-2xl p-5 ${debitCards[activeCardIndex].bg} border ${debitCards[activeCardIndex].border} shadow-xl text-white flex flex-col justify-between relative overflow-hidden transition-all duration-500 transform hover:scale-[1.01]`}>
+              
+              {/* Decorative Blur Effect */}
+              <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-black/20 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Top Row: Bank Brand & Contactless Symbol */}
+              <div className="flex justify-between items-start relative z-10">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold tracking-wider uppercase opacity-90">Access National</span>
+                  <span className="text-[9px] uppercase tracking-widest text-white/70 font-mono">Debit Card</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Wifi size={20} className="text-white/80 rotate-90" />
+                  <span className="font-bold font-mono text-sm tracking-widest">{debitCards[activeCardIndex].brand}</span>
+                </div>
+              </div>
+
+              {/* Center: Metallic Chip & Card Number */}
+              <div className="flex flex-col gap-3 relative z-10 my-auto">
+                <div className="w-10 h-7 rounded bg-gradient-to-tr from-amber-200 via-amber-400 to-yellow-100 border border-amber-500/50 shadow-inner flex items-center justify-center">
+                  <div className="w-8 h-5 border border-amber-600/40 rounded-sm" />
+                </div>
+                <span className="font-mono text-base sm:text-lg tracking-widest text-white/90 drop-shadow font-semibold">
+                  {debitCards[activeCardIndex].cardNumber}
+                </span>
+              </div>
+
+              {/* Bottom Row: Cardholder Name & Expiry */}
+              <div className="flex justify-between items-end relative z-10 text-[10px] sm:text-xs">
+                <div className="flex flex-col">
+                  <span className="text-[8px] uppercase tracking-wider text-white/60 font-semibold">Cardholder</span>
+                  <span className="font-bold uppercase tracking-wider font-mono text-white/90 truncate max-w-[170px]">
+                    {debitCards[activeCardIndex].holder}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[8px] uppercase tracking-wider text-white/60 font-semibold">Expires</span>
+                  <span className="font-mono font-bold text-white/90">{debitCards[activeCardIndex].expiry}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={() => setActiveCardIndex((prev) => (prev === 0 ? debitCards.length - 1 : prev - 1))}
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur transition-all cursor-pointer shadow-md"
+              title="Previous Card"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => setActiveCardIndex((prev) => (prev === debitCards.length - 1 ? 0 : prev + 1))}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur transition-all cursor-pointer shadow-md"
+              title="Next Card"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          {/* Carousel Dots */}
+          <div className="flex items-center justify-center gap-2">
+            {debitCards.map((card, idx) => (
+              <button
+                key={card.id}
+                onClick={() => setActiveCardIndex(idx)}
+                className={`h-2 rounded-full transition-all cursor-pointer ${
+                  activeCardIndex === idx ? 'w-6 bg-primary' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                }`}
+                title={card.name}
+              />
+            ))}
+          </div>
+
+          {/* Apply for Card Button */}
+          <Link
+            href="/dashboard/cards"
+            className="w-full py-3.5 px-4 bg-primary hover:bg-red-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer text-center mt-1"
+          >
+            <CreditCard size={16} />
+            <span>Apply for Access Debit Card</span>
+            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
         </div>
 
       </div>
 
       {/* 4. Recent Transactions Ledger */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 px-[10px] py-6 sm:p-8 shadow-sm">
         <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-base uppercase tracking-wider">
             Transaction Activity Ledger
