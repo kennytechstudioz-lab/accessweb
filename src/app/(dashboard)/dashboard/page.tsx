@@ -12,7 +12,6 @@ import {
   ArrowDownLeft, 
   Copy, 
   Check, 
-  ChevronLeft, 
   ChevronRight, 
   Wifi 
 } from 'lucide-react';
@@ -23,7 +22,12 @@ export default function DashboardOverview() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Debit card carousel & swipe states
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -75,7 +79,6 @@ export default function DashboardOverview() {
       category: 'VISA PLATINUM',
       bg: 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-950',
       border: 'border-amber-400/30',
-      textColor: 'text-amber-100',
       brand: 'VISA',
       cardNumber: '4829 •••• •••• 9012',
       holder: profile?.fullName || 'ACCESS CARDHOLDER',
@@ -87,7 +90,6 @@ export default function DashboardOverview() {
       category: 'WORLD MASTERCARD',
       bg: 'bg-gradient-to-br from-red-600 via-red-800 to-slate-950',
       border: 'border-red-500/30',
-      textColor: 'text-red-100',
       brand: 'Mastercard',
       cardNumber: '5399 •••• •••• 4410',
       holder: profile?.fullName || 'ACCESS CARDHOLDER',
@@ -99,13 +101,48 @@ export default function DashboardOverview() {
       category: 'AMEX DIAMOND VAULT',
       bg: 'bg-gradient-to-br from-slate-900 via-zinc-900 to-black',
       border: 'border-slate-700',
-      textColor: 'text-slate-200',
       brand: 'AMEX',
       cardNumber: '3782 •••••• 88301',
       holder: profile?.fullName || 'ACCESS CARDHOLDER',
       expiry: '04/30',
     },
   ];
+
+  // Auto-slide effect continuously in one direction (every 3.5 seconds)
+  useEffect(() => {
+    if (isDragging) return;
+    const interval = setInterval(() => {
+      setActiveCardIndex((prev) => (prev + 1) % debitCards.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [isDragging, debitCards.length]);
+
+  // Touch and Mouse Drag / Swipe event handlers
+  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+    setIsDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    setTouchStartX(clientX);
+    setTouchDeltaX(0);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDragging) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    setTouchDeltaX(clientX - touchStartX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (touchDeltaX < -40) {
+      // Swipe left -> next card
+      setActiveCardIndex((prev) => (prev + 1) % debitCards.length);
+    } else if (touchDeltaX > 40) {
+      // Swipe right -> prev card
+      setActiveCardIndex((prev) => (prev === 0 ? debitCards.length - 1 : prev - 1));
+    }
+    setTouchDeltaX(0);
+  };
 
   if (loading) {
     return (
@@ -242,7 +279,7 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* 3 Colored Debit Card Carousel Section */}
+        {/* 3 Colored Debit Card Carousel Section (Auto-sliding & Swipe supported) */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 px-[10px] py-6 sm:p-8 shadow-sm flex flex-col gap-5">
           <div className="flex justify-between items-center pb-3 border-b border-slate-100">
             <h3 className="font-bold text-slate-900 text-sm sm:text-base uppercase tracking-wider">
@@ -253,9 +290,23 @@ export default function DashboardOverview() {
             </span>
           </div>
 
-          {/* Carousel Card Display */}
-          <div className="relative group">
-            <div className={`w-full h-48 sm:h-52 rounded-2xl p-5 ${debitCards[activeCardIndex].bg} border ${debitCards[activeCardIndex].border} shadow-xl text-white flex flex-col justify-between relative overflow-hidden transition-all duration-500 transform hover:scale-[1.01]`}>
+          {/* Carousel Card Container with Touch & Drag Handlers */}
+          <div 
+            className="relative select-none cursor-grab active:cursor-grabbing overflow-hidden rounded-2xl"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleTouchStart}
+            onMouseMove={handleTouchMove}
+            onMouseUp={handleTouchEnd}
+            onMouseLeave={handleTouchEnd}
+          >
+            <div 
+              className={`w-full h-48 sm:h-52 rounded-2xl p-5 ${debitCards[activeCardIndex].bg} border ${debitCards[activeCardIndex].border} shadow-xl text-white flex flex-col justify-between relative overflow-hidden transition-transform duration-300`}
+              style={{
+                transform: isDragging ? `translateX(${touchDeltaX}px)` : 'translateX(0px)',
+              }}
+            >
               
               {/* Decorative Blur Effect */}
               <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -297,22 +348,6 @@ export default function DashboardOverview() {
                 </div>
               </div>
             </div>
-
-            {/* Navigation Arrows */}
-            <button
-              onClick={() => setActiveCardIndex((prev) => (prev === 0 ? debitCards.length - 1 : prev - 1))}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur transition-all cursor-pointer shadow-md"
-              title="Previous Card"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={() => setActiveCardIndex((prev) => (prev === debitCards.length - 1 ? 0 : prev + 1))}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur transition-all cursor-pointer shadow-md"
-              title="Next Card"
-            >
-              <ChevronRight size={18} />
-            </button>
           </div>
 
           {/* Carousel Dots */}
