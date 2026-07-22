@@ -1,13 +1,34 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Landmark, ArrowRightLeft, HelpCircle, AlertCircle, CheckCircle2, ShieldCheck, Mail } from 'lucide-react';
+import React, { useEffect, useState, useTransition } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { 
+  Landmark, 
+  ArrowRightLeft, 
+  HelpCircle, 
+  AlertCircle, 
+  CheckCircle2, 
+  ShieldCheck, 
+  Mail, 
+  Lock, 
+  UserCheck, 
+  UserX, 
+  X,
+  CreditCard
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useToastStore } from '@/store/toastStore';
 
 export default function Transfer() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { showToast } = useToastStore();
+
+  const urlType = searchParams.get('type') || 'internal';
+
   const [profile, setProfile] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
-  const [transferType, setTransferType] = useState<'internal' | 'local' | 'wire'>('internal');
+  const [transferType, setTransferType] = useState<'internal' | 'local' | 'wire'>(urlType as any);
   
   // Form fields
   const [currency, setCurrency] = useState('USD');
@@ -19,18 +40,21 @@ export default function Transfer() {
   const [routineNumber, setRoutineNumber] = useState('');
   const [receiverAddress, setReceiverAddress] = useState('');
   
-  // State
-  const [error, setError] = useState('');
+  // Account Lookup State
+  const [lookingUp, setLookingUp] = useState(false);
+  const [foundBeneficiary, setFoundBeneficiary] = useState<{ fullName: string; username: string; accountNumber: string } | null>(null);
+  const [accountError, setAccountError] = useState('');
+
+  // Transfer execution & modal state
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Security code prompt modal state
-  const [showCodeModal, setShowCodeModal] = useState(false);
-  const [codeType, setCodeType] = useState<'TAC' | 'IMF' | 'TAX' | null>(null);
-  const [codeValue, setCodeValue] = useState('');
-  const [modalError, setModalError] = useState('');
-  const [modalLoading, setModalLoading] = useState(false);
-  const [codeRequested, setCodeRequested] = useState(false);
+  // PIN Modals
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showCreatePinModal, setShowCreatePinModal] = useState(false);
+  const [enteredPin, setEnteredPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmNewPin, setConfirmNewPin] = useState('');
 
   const fetchTransferData = async () => {
     try {
@@ -52,7 +76,7 @@ export default function Transfer() {
         setCurrency(accountsData[0].currency);
       }
     } catch (e) {
-      console.error('Error fetching data:', e);
+      console.error('Error fetching transfer data:', e);
     }
   };
 
@@ -60,76 +84,145 @@ export default function Transfer() {
     fetchTransferData();
   }, []);
 
-  // Trigger security checks when submitting main transfer form
-  const handleInitiateTransfer = (e: React.FormEvent) => {
+  // Update transferType when URL query param changes
+  useEffect(() => {
+    if (urlType === 'internal' || urlType === 'local' || urlType === 'international' || urlType === 'wire') {
+      setTransferType(urlType === 'international' ? 'wire' : (urlType as any));
+    }
+  }, [urlType]);
+
+  // Real-time Account Lookup Effect
+  useEffect(() => {
+    if (transferType !== 'internal') return;
+    
+    const trimmed = receiverAccountNumber.trim();
+    if (trimmed.length < 4) {
+      setFoundBeneficiary(null);
+      setAccountError('');
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLookingUp(true);
+      setAccountError('');
+      setFoundBeneficiary(null);
+
+      try {
+        const token = localStorage.getItem('token');
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+
+        const res = await fetch(`${apiUrl}/user/lookup-account?accountNumber=${encodeURIComponent(trimmed)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (res.ok && data.found) {
+          setFoundBeneficiary({
+            fullName: data.fullName,
+            username: data.username,
+            accountNumber: data.accountNumber,
+          });
+          setReceiverName(data.fullName);
+        } else {
+          setAccountError(data.message || 'Account not found in Access National Bank ledger.');
+        }
+      } catch (err) {
+        setAccountError('Account not found in Access National Bank ledger.');
+      } finally {
+        setLookingUp(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [receiverAccountNumber, transferType]);
+
+  // Handle Proceed Button Click
+  const handleProceedClick = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setSuccessMsg('');
 
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setError('Please enter a valid amount.');
+      showToast('Please enter a valid transfer amount.', 'error');
       return;
     }
 
     const selectedAccount = accounts.find((a) => a.currency === currency);
     if (!selectedAccount || selectedAccount.balance < parsedAmount) {
-      setError('Insufficient funds in the selected currency.');
+      showToast('Insufficient funds in the selected wallet.', 'error');
       return;
     }
 
-    // Determine if security codes are required based on profile flags and transaction type
-    // If the transfer is wire or larger than 10,000, trigger IMF/TAC clearance
-    if (transferType === 'wire' && profile?.onReview) {
-      // Prompt for IMF Clearance Code
-      setCodeType('IMF');
-      setShowCodeModal(true);
-    } else if (parsedAmount >= 5000) {
-      // Prompt for TAC Code
-      setCodeType('TAC');
-      setShowCodeModal(true);
+    if (transferType === 'internal') {
+      if (!foundBeneficiary) {
+        showToast('Please enter a valid recipient account number.', 'error');
+        return;
+      }
+    }
+
+    // Check if user has PIN set
+    if (profile?.pin && profile.pin > 0) {
+      setEnteredPin('');
+      setShowPinModal(true);
     } else {
-      // Proceed directly
-      executeTransfer();
+      setNewPin('');
+      setConfirmNewPin('');
+      setShowCreatePinModal(true);
     }
   };
 
-  // Trigger Request Code API
-  const handleRequestCode = async () => {
-    if (!codeType) return;
-    setModalError('');
-    setModalLoading(true);
+  // Create PIN and proceed with transfer
+  const handleCreatePinAndTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPin.length < 4) {
+      showToast('Transaction PIN must be at least 4 digits.', 'error');
+      return;
+    }
+    if (newPin !== confirmNewPin) {
+      showToast('PIN confirmation does not match.', 'error');
+      return;
+    }
+
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
-      const response = await fetch(`${apiUrl}/user/request-code`, {
+      const res = await fetch(`${apiUrl}/user/set-pin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ type: codeType }),
+        body: JSON.stringify({ pin: newPin }),
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to request clearance code');
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to create PIN');
 
-      setCodeRequested(true);
+      setShowCreatePinModal(false);
+      // Execute transfer with created PIN
+      executeTransfer(newPin);
     } catch (err: any) {
-      setModalError(err.message || 'Error requesting code');
-    } finally {
-      setModalLoading(false);
+      showToast(err.message || 'Error creating PIN', 'error');
+      setLoading(false);
     }
   };
 
-  // Submit verified transfer with clearance code (or directly)
-  const executeTransfer = async (verifiedCodeType?: string, verifiedCodeValue?: string) => {
+  // Authorize Transfer with PIN
+  const handleAuthorizeWithPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!enteredPin) {
+      showToast('Please enter your 4-digit Transaction PIN.', 'error');
+      return;
+    }
+    setShowPinModal(false);
+    executeTransfer(enteredPin);
+  };
+
+  // Execute Transfer API Call
+  const executeTransfer = async (pinValue: string) => {
     setLoading(true);
-    setError('');
-    setModalError('');
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
@@ -145,35 +238,25 @@ export default function Transfer() {
           amount,
           currency,
           receiverAccountNumber,
-          receiverName,
-          receiverBank,
+          receiverName: transferType === 'internal' ? (foundBeneficiary?.fullName || receiverName) : receiverName,
+          receiverBank: transferType === 'internal' ? 'Access National Bank' : receiverBank,
           swiftCode,
           routineNumber,
           receiverAddress,
-          codeType: verifiedCodeType || '',
-          codeValue: verifiedCodeValue || '',
+          pin: pinValue,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.codeError) {
-          // If code was wrong/required, trigger modal error
-          if (showCodeModal) {
-            setModalError(data.message || 'Clearance code verification failed.');
-          } else {
-            setCodeType(data.codeError);
-            setShowCodeModal(true);
-            setModalError(data.message);
-          }
-          return;
-        }
         throw new Error(data.message || 'Transfer transaction failed');
       }
 
       // Success
       setSuccessMsg(data.message || 'Transfer completed successfully.');
+      showToast('Transfer completed successfully!', 'success');
+
       confetti({
         particleCount: 150,
         spread: 80,
@@ -185,42 +268,38 @@ export default function Transfer() {
       setAmount('');
       setReceiverAccountNumber('');
       setReceiverName('');
+      setFoundBeneficiary(null);
       setReceiverBank('');
       setSwiftCode('');
       setRoutineNumber('');
       setReceiverAddress('');
-      setShowCodeModal(false);
-      setCodeType(null);
-      setCodeValue('');
-      setCodeRequested(false);
 
-      // Re-fetch balances
+      // Re-fetch profile and balances
       fetchTransferData();
     } catch (err: any) {
-      setError(err.message || 'An error occurred during transfer.');
+      showToast(err.message || 'An error occurred during transfer.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-8 relative">
+    <div className="flex flex-col gap-8 relative font-sans">
       
       {/* Page Title */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-extrabold text-slate-900 uppercase tracking-tight">Dispatch Funds</h2>
-        <p className="text-slate-400 text-xs font-light">Perform internal ledger transactions or outbound wire transfers.</p>
+        <h2 className="text-xl font-extrabold text-slate-900 uppercase tracking-tight">
+          {transferType === 'internal' ? 'Internal Account Wire Dispatch' : 'Outbound Money Dispatch'}
+        </h2>
+        <p className="text-slate-500 text-xs font-light">
+          {transferType === 'internal' 
+            ? 'Transfer funds instantly to another Access National Bank account holder.' 
+            : 'Transfer funds to local external bank accounts or international wire destinations.'}
+        </p>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-xs flex gap-2.5 items-start">
-          <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
-
       {successMsg && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-5 rounded-xl text-xs sm:text-sm flex gap-3 items-start">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-5 rounded-2xl text-xs sm:text-sm flex gap-3 items-start shadow-sm">
           <CheckCircle2 size={22} className="text-emerald-600 flex-shrink-0 mt-0.5" />
           <div>
             <h4 className="font-bold">Transaction Dispatched Successfully!</h4>
@@ -231,67 +310,63 @@ export default function Transfer() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Main form */}
+        {/* Main Form */}
         <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-6">
           
-          {/* Transfer Type Selector */}
-          <div className="flex bg-slate-50 border border-slate-100 p-1.5 rounded-xl text-xs font-bold gap-1">
-            <button
-              onClick={() => {
-                setTransferType('internal');
-                setError('');
-              }}
-              className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
-                transferType === 'internal' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Internal Transfer
-            </button>
-            <button
-              onClick={() => {
-                setTransferType('local');
-                setError('');
-              }}
-              className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
-                transferType === 'local' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Local Bank Transfer
-            </button>
-            <button
-              onClick={() => {
-                setTransferType('wire');
-                setError('');
-              }}
-              className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
-                transferType === 'wire' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              International Wire
-            </button>
-          </div>
+          {/* If NOT internal transfer, show tab switcher. If internal transfer, hide other transfer type tabs! */}
+          {urlType !== 'internal' && (
+            <div className="flex bg-slate-50 border border-slate-100 p-1.5 rounded-xl text-xs font-bold gap-1">
+              <button
+                onClick={() => setTransferType('internal')}
+                className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
+                  transferType === 'internal' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Internal Transfer
+              </button>
+              <button
+                onClick={() => setTransferType('local')}
+                className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
+                  transferType === 'local' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Local Bank Transfer
+              </button>
+              <button
+                onClick={() => setTransferType('wire')}
+                className={`flex-1 py-3 text-center rounded-lg cursor-pointer transition-all ${
+                  transferType === 'wire' ? 'bg-secondary text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                International Wire
+              </button>
+            </div>
+          )}
 
-          <form onSubmit={handleInitiateTransfer} className="flex flex-col gap-5">
+          <form onSubmit={handleProceedClick} className="flex flex-col gap-6">
             
-            {/* Account Selector & Amount */}
+            {/* 1. Account Selector & Amount */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              
+              {/* Select Source Account */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-600">Select Wallet / Currency</label>
+                <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">Select Source Account Wallet</label>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50 font-bold text-slate-800 cursor-pointer"
                 >
                   {accounts.map((a) => (
                     <option key={a._id} value={a.currency}>
-                      {a.currency} - Balance: {a.symbol}{a.balance.toLocaleString()}
+                      {a.currency} Wallet - Available: {a.symbol}{a.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Amount */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-600">Transfer Amount</label>
+                <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">Transfer Amount</label>
                 <input
                   type="number"
                   step="0.01"
@@ -299,42 +374,73 @@ export default function Transfer() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 font-mono font-semibold"
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50 font-mono font-bold text-slate-900"
                 />
               </div>
             </div>
 
-            {/* Recipient Account Details */}
+            {/* 2. Recipient Account Number & Account Lookup */}
             <div className="border-t border-slate-100 pt-5 flex flex-col gap-5">
               <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wide">
-                Beneficiary Details
+                Beneficiary Clearance
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-600">
-                    {transferType === 'internal' ? 'Recipient Account Number or Username' : 'Recipient Account Number / IBAN'}
+                  <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">
+                    {transferType === 'internal' ? 'Destination Account Number' : 'Recipient Account Number / IBAN'}
                   </label>
                   <input
                     type="text"
                     required
                     value={receiverAccountNumber}
                     onChange={(e) => setReceiverAccountNumber(e.target.value)}
-                    placeholder="Enter digits/username"
-                    className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 font-mono"
+                    placeholder="Enter recipient account number (e.g. 104829012)"
+                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50 font-mono font-bold text-slate-900"
                   />
                 </div>
 
+                {/* Account Lookup Live Feedback for Internal Transfer */}
+                {transferType === 'internal' && (
+                  <div>
+                    {lookingUp && (
+                      <div className="bg-slate-50 border border-slate-200 text-slate-500 p-3 rounded-lg text-xs flex items-center gap-2 animate-pulse">
+                        <Landmark size={14} className="animate-spin text-primary" />
+                        <span>Auditing account ledger for beneficiary...</span>
+                      </div>
+                    )}
+
+                    {foundBeneficiary && (
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs flex items-center justify-between gap-2 shadow-xs">
+                        <div className="flex items-center gap-2 font-bold">
+                          <UserCheck size={16} className="text-emerald-600" />
+                          <span>Beneficiary Verified: {foundBeneficiary.fullName}</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-emerald-600 uppercase bg-emerald-100 px-2 py-0.5 rounded font-extrabold">
+                          @{foundBeneficiary.username}
+                        </span>
+                      </div>
+                    )}
+
+                    {accountError && (
+                      <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-xs flex items-center gap-2 shadow-xs">
+                        <UserX size={16} className="text-red-600 flex-shrink-0" />
+                        <span>{accountError}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {transferType !== 'internal' && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">Recipient Account Name</label>
+                  <div className="flex flex-col gap-1.5 mt-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">Beneficiary Full Name</label>
                     <input
                       type="text"
                       required
                       value={receiverName}
                       onChange={(e) => setReceiverName(e.target.value)}
                       placeholder="Beneficiary Full Name"
-                      className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50 font-semibold"
                     />
                   </div>
                 )}
@@ -343,25 +449,25 @@ export default function Transfer() {
               {transferType !== 'internal' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">Recipient Bank Name</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">Recipient Bank Name</label>
                     <input
                       type="text"
                       required
                       value={receiverBank}
                       onChange={(e) => setReceiverBank(e.target.value)}
-                      placeholder="e.g. Bank of America"
-                      className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                      placeholder="e.g. Chase Bank"
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">SWIFT / BIC Code</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">SWIFT / BIC Code</label>
                     <input
                       type="text"
                       required
                       value={swiftCode}
                       onChange={(e) => setSwiftCode(e.target.value)}
-                      placeholder="e.g. BOFAUS3NXXX"
-                      className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 font-mono"
+                      placeholder="BOFAUS3NXXX"
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50 font-mono"
                     />
                   </div>
                 </div>
@@ -370,42 +476,39 @@ export default function Transfer() {
               {transferType === 'wire' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">Routing Number / Sort Code</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">Routing Number / Sort Code</label>
                     <input
                       type="text"
                       required
                       value={routineNumber}
                       onChange={(e) => setRoutineNumber(e.target.value)}
                       placeholder="9-digit routing"
-                      className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50 font-mono"
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50 font-mono"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-600">Recipient Home/Bank Address</label>
+                    <label className="text-xs font-bold text-slate-700 uppercase text-[10px]">Recipient Address</label>
                     <input
                       type="text"
                       required
                       value={receiverAddress}
                       onChange={(e) => setReceiverAddress(e.target.value)}
-                      placeholder="Beneficiary Address"
-                      className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-slate-50"
+                      placeholder="Beneficiary Street Address"
+                      className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-primary bg-slate-50"
                     />
                   </div>
                 </div>
               )}
             </div>
 
+            {/* Proceed Button */}
             <button
               type="submit"
-              disabled={loading}
-              className="bg-primary text-white font-bold py-4 rounded hover:bg-primary-hover shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:bg-slate-400 disabled:cursor-not-allowed mt-4 cursor-pointer"
+              disabled={loading || (transferType === 'internal' && !foundBeneficiary)}
+              className="bg-primary hover:bg-red-800 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:bg-slate-300 disabled:cursor-not-allowed mt-2 cursor-pointer"
             >
-              {loading ? <span>Clearing transaction ledgers...</span> : (
-                <>
-                  <span>Clear & Dispatch Funds</span>
-                  <ArrowRightLeft size={16} />
-                </>
-              )}
+              <span>{loading ? 'Processing Transfer...' : 'Proceed with Transfer'}</span>
+              <ArrowRightLeft size={16} />
             </button>
 
           </form>
@@ -416,19 +519,19 @@ export default function Transfer() {
         <div className="lg:col-span-4 flex flex-col gap-6">
           
           <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-md flex flex-col gap-4">
-            <h4 className="font-bold text-sm uppercase tracking-wider text-primary">Clearance Notes</h4>
+            <h4 className="font-bold text-xs uppercase tracking-wider text-primary">Internal Clearance Protocol</h4>
             <ul className="text-xs font-light text-slate-300 flex flex-col gap-3 leading-relaxed">
               <li className="flex gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span><b>Internal Transfers:</b> Instantly debited and credited to receiving client wallets.</span>
+                <span><b>Instant Settlement:</b> Internal transfers between Access National Bank client accounts execute immediately.</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span><b>Outbound Clearance:</b> External local and wire transfers are queued in security audit. Approval happens within 1-2 banking hours.</span>
+                <span><b>PIN Verification:</b> Authorize transactions securely with your 4-digit Transaction PIN.</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-bold">•</span>
-                <span><b>Security Locks:</b> Large transactions may require temporary TAC or IMF codes to release escrow locks.</span>
+                <span><b>Beneficiary Verification:</b> Account numbers are checked live against bank ledger records to ensure funds reach the correct recipient.</span>
               </li>
             </ul>
           </div>
@@ -436,9 +539,9 @@ export default function Transfer() {
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex gap-4 items-start">
             <HelpCircle size={20} className="text-primary flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-bold text-slate-800 text-sm mb-1">Need a Security Code?</h4>
+              <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-1">Security PIN Help</h4>
               <p className="text-xs font-light text-slate-500 leading-relaxed">
-                If your account triggers compliance codes, submit the transaction to reveal the prompt. Click "Request Code" in the clearance window to receive the code via email.
+                Need to change or manage your 4-digit Transaction PIN? You can manage your PIN, change passwords, and toggle 2FA in the <b>Settings</b> section.
               </p>
             </div>
           </div>
@@ -447,87 +550,125 @@ export default function Transfer() {
 
       </div>
 
-      {/* 4. Security Verification Code Prompt Modal */}
-      {showCodeModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
+      {/* 3. Enter PIN Pop-up Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full flex flex-col gap-6 relative">
-            
-            {/* Modal Header */}
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="p-3 bg-red-50 text-primary rounded-full animate-bounce">
-                <ShieldCheck size={32} />
+            <button 
+              onClick={() => setShowPinModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="p-3 bg-red-50 text-primary rounded-full">
+                <Lock size={28} />
               </div>
-              <h3 className="font-extrabold text-slate-900 text-lg sm:text-xl uppercase tracking-tight">
-                {codeType === 'TAC' ? 'Compliance Code Required' : 'International Clearance Required'}
-              </h3>
-              <p className="text-xs font-light text-slate-500 leading-relaxed">
-                {codeType === 'TAC' 
-                  ? 'Your transaction requires a 5-digit Transaction Authorization Code (TAC) to clear escrow transit locks.'
-                  : 'Your international wire transfer requires an IMF Clearance clearance code for regulatory dispatch.'
-                }
+              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">Authorize Transaction</h3>
+              <p className="text-xs text-slate-500 font-light leading-relaxed">
+                Enter your 4-digit Transaction PIN to complete sending <span className="font-bold text-slate-900">${amount}</span> to <span className="font-bold text-slate-900">{foundBeneficiary?.fullName || receiverName}</span>.
               </p>
             </div>
 
-            {/* Modal error */}
-            {modalError && (
-              <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-xs flex gap-2 items-center">
-                <AlertCircle size={16} className="flex-shrink-0" />
-                <span>{modalError}</span>
-              </div>
-            )}
-
-            {/* Code request success notification */}
-            {codeRequested && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs flex gap-2 items-center">
-                <Mail size={16} className="flex-shrink-0 text-emerald-600" />
-                <span>Clearance code successfully sent to your email.</span>
-              </div>
-            )}
-
-            {/* Code submission form */}
-            <div className="flex flex-col gap-4">
+            <form onSubmit={handleAuthorizeWithPin} className="flex flex-col gap-4">
               <input
-                type="text"
+                type="password"
                 required
-                maxLength={10}
-                value={codeValue}
-                onChange={(e) => setCodeValue(e.target.value)}
-                placeholder={codeType === 'TAC' ? 'Enter 5-digit TAC code' : 'Enter IMF code'}
-                className="w-full border border-slate-200 rounded px-4 py-3 text-center text-sm font-mono font-bold tracking-widest focus:outline-none focus:ring-1 focus:ring-primary bg-slate-50"
+                autoFocus
+                maxLength={6}
+                value={enteredPin}
+                onChange={(e) => setEnteredPin(e.target.value)}
+                placeholder="Enter 4-digit PIN"
+                className="w-full border border-slate-200 rounded-xl py-3.5 px-4 text-center font-mono font-bold text-lg tracking-widest focus:outline-none focus:border-primary bg-slate-50"
               />
 
-              <div className="flex gap-4">
+              <div className="flex gap-3 mt-2">
                 <button
-                  onClick={handleRequestCode}
-                  disabled={modalLoading}
-                  className="flex-1 border border-slate-200 hover:bg-slate-50 font-bold py-3 rounded text-xs transition-colors cursor-pointer text-slate-700 disabled:bg-slate-100"
+                  type="button"
+                  onClick={() => setShowPinModal(false)}
+                  className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  {modalLoading ? 'Requesting...' : 'Request Code'}
+                  Cancel
                 </button>
-                
                 <button
-                  onClick={() => executeTransfer(codeType || '', codeValue)}
-                  disabled={loading || !codeValue}
-                  className="flex-1 bg-primary text-white font-bold py-3 rounded hover:bg-primary-hover shadow transition-colors text-xs disabled:bg-slate-400 cursor-pointer"
+                  type="submit"
+                  disabled={loading || !enteredPin}
+                  className="flex-1 py-3 bg-primary hover:bg-red-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all cursor-pointer disabled:bg-slate-300"
                 >
-                  {loading ? 'Clearing...' : 'Verify & Send'}
+                  {loading ? 'Authorizing...' : 'Authorize & Send'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-              <button
-                onClick={() => {
-                  setShowCodeModal(false);
-                  setCodeType(null);
-                  setCodeValue('');
-                  setCodeRequested(false);
-                  setModalError('');
-                }}
-                className="text-center text-xs text-slate-450 hover:text-primary transition-colors py-1 cursor-pointer"
-              >
-                Cancel Transfer
-              </button>
+      {/* 4. Create PIN Pop-up Modal (If User has no PIN set yet) */}
+      {showCreatePinModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full flex flex-col gap-6 relative">
+            <button 
+              onClick={() => setShowCreatePinModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="p-3 bg-amber-50 text-amber-600 rounded-full">
+                <ShieldCheck size={28} />
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">Create Transaction PIN</h3>
+              <p className="text-xs text-slate-500 font-light leading-relaxed">
+                You have not created a Transaction PIN yet. Please create a 4-digit PIN to authorize this transfer and protect your account.
+              </p>
             </div>
 
+            <form onSubmit={handleCreatePinAndTransfer} className="flex flex-col gap-4 text-xs">
+              <div className="flex flex-col gap-1.5">
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Create 4-Digit PIN</label>
+                <input
+                  type="password"
+                  required
+                  maxLength={6}
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value)}
+                  placeholder="Enter 4-digit PIN"
+                  className="w-full border border-slate-200 rounded-xl py-3 px-4 text-center font-mono font-bold text-sm tracking-widest focus:outline-none focus:border-primary bg-slate-50"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Confirm 4-Digit PIN</label>
+                <input
+                  type="password"
+                  required
+                  maxLength={6}
+                  value={confirmNewPin}
+                  onChange={(e) => setConfirmNewPin(e.target.value)}
+                  placeholder="Re-enter 4-digit PIN"
+                  className="w-full border border-slate-200 rounded-xl py-3 px-4 text-center font-mono font-bold text-sm tracking-widest focus:outline-none focus:border-primary bg-slate-50"
+                />
+              </div>
+
+              <div className="flex gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreatePinModal(false)}
+                  className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 py-3 bg-primary hover:bg-red-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all cursor-pointer disabled:bg-slate-300"
+                >
+                  {loading ? 'Creating PIN...' : 'Save PIN & Send'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
