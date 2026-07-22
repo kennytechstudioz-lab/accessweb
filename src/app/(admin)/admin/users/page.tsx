@@ -50,6 +50,11 @@ export default function UsersAdminPage() {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [submittingTx, setSubmittingTx] = useState(false);
 
+  // Suspension Toggle Confirmation Modal state
+  const [suspensionTargetUser, setSuspensionTargetUser] = useState<any>(null);
+  const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
+  const [togglingSuspension, setTogglingSuspension] = useState(false);
+
   // Bulk Email Modal & DB Templates state
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [dbEmailTemplates, setDbEmailTemplates] = useState<any[]>([]);
@@ -344,6 +349,32 @@ export default function UsersAdminPage() {
     }
   };
 
+  const handlePromptToggleSuspension = (user: any) => {
+    setSuspensionTargetUser(user);
+    setIsSuspensionModalOpen(true);
+  };
+
+  const handleConfirmToggleSuspension = async () => {
+    if (!suspensionTargetUser) return;
+    setTogglingSuspension(true);
+    const targetStatus = !suspensionTargetUser.suspended;
+
+    try {
+      const data = await api.put(`/admin/users/${suspensionTargetUser._id}`, { suspended: targetStatus });
+      showToast(targetStatus ? `User @${suspensionTargetUser.username} has been suspended.` : `User @${suspensionTargetUser.username} has been activated.`, 'success');
+      if (selectedUser && selectedUser._id === suspensionTargetUser._id) {
+        setSelectedUser(data.user);
+      }
+      setIsSuspensionModalOpen(false);
+      setSuspensionTargetUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      showToast(err.message || 'Error updating user status.', 'error');
+    } finally {
+      setTogglingSuspension(false);
+    }
+  };
+
   const handleToggleSuspension = async (suspendedValue: boolean) => {
     if (!selectedUser) return;
 
@@ -602,9 +633,13 @@ export default function UsersAdminPage() {
                       </td>
                       <td className="py-4">
                         <div className="flex flex-col gap-1.5 items-start">
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase ${
-                            user.suspended ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                          }`}>
+                          <span 
+                            onClick={() => handlePromptToggleSuspension(user)}
+                            className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase cursor-pointer hover:opacity-80 transition-all ${
+                              user.suspended ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                            }`}
+                            title={user.suspended ? 'Click to remove suspension' : 'Click to suspend user'}
+                          >
                             {user.suspended ? 'Suspended' : 'Active'}
                           </span>
                           <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase ${
@@ -1011,32 +1046,17 @@ export default function UsersAdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Transaction Amount</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      placeholder="0.00"
-                      value={txForm.amount}
-                      onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })}
-                      className="border border-slate-200 rounded px-3.5 py-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:border-primary font-mono font-bold"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Clearance Status</label>
-                    <select
-                      value={txForm.status}
-                      onChange={(e) => setTxForm({ ...txForm, status: e.target.value })}
-                      className="border border-slate-200 rounded px-2.5 py-2.5 text-xs bg-slate-50 text-slate-750 focus:outline-none focus:border-primary font-semibold"
-                    >
-                      <option value="Approved">Approved</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Failed">Failed</option>
-                    </select>
-                  </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-650 uppercase">Transaction Amount</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    value={txForm.amount}
+                    onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })}
+                    className="border border-slate-200 rounded px-3.5 py-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:border-primary font-mono font-bold"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -1388,6 +1408,64 @@ export default function UsersAdminPage() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Suspension Toggle Confirmation Pop-up Modal */}
+      {isSuspensionModalOpen && suspensionTargetUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[99] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-slideIn p-6 sm:p-8 flex flex-col gap-6 relative">
+            <button 
+              onClick={() => setIsSuspensionModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className={`p-3.5 rounded-full ${
+                suspensionTargetUser.suspended ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+              }`}>
+                {suspensionTargetUser.suspended ? <UserCheck size={32} /> : <Ban size={32} />}
+              </div>
+              
+              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">
+                {suspensionTargetUser.suspended ? 'Remove Account Suspension?' : 'Suspend Client Account?'}
+              </h3>
+              
+              <p className="text-xs text-slate-500 font-light leading-relaxed">
+                {suspensionTargetUser.suspended ? (
+                  <>
+                    Are you sure you want to remove the suspension for client <span className="font-bold text-slate-900">@{suspensionTargetUser.username}</span> ({suspensionTargetUser.fullName || 'User'})? The account will become active and regain transfer privileges.
+                  </>
+                ) : (
+                  <>
+                    Are you sure you want to suspend client account <span className="font-bold text-slate-900">@{suspensionTargetUser.username}</span> ({suspensionTargetUser.fullName || 'User'})? The client will be locked out of transfer and vault operations.
+                  </>
+                )}
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button
+                type="button"
+                onClick={() => setIsSuspensionModalOpen(false)}
+                className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={togglingSuspension}
+                onClick={handleConfirmToggleSuspension}
+                className={`flex-1 py-3 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all cursor-pointer disabled:bg-slate-300 ${
+                  suspensionTargetUser.suspended ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {togglingSuspension ? 'Processing...' : suspensionTargetUser.suspended ? 'Remove Suspension & Activate' : 'Confirm Suspension'}
+              </button>
+            </div>
           </div>
         </div>
       )}
