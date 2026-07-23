@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Sparkles,
   UserCheck,
-  FileText
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 import { useUsersStore } from '@/store/usersStore';
 import { useToastStore } from '@/store/toastStore';
@@ -54,6 +55,12 @@ export default function UsersAdminPage() {
   const [suspensionTargetUser, setSuspensionTargetUser] = useState<any>(null);
   const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
   const [togglingSuspension, setTogglingSuspension] = useState(false);
+
+  // Custom Warning Delete Confirmation Modal state
+  const [deleteTargetUser, setDeleteTargetUser] = useState<any>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   // Bulk Email Modal & DB Templates state
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -440,30 +447,46 @@ export default function UsersAdminPage() {
     }
   };
 
-  const handleDeleteUser = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this user? This cannot be undone.')) return;
+  const handleDeleteUser = (user: any) => {
+    setDeleteTargetUser(user);
+    setIsDeleteModalOpen(true);
+  };
 
+  const confirmDeleteUser = async () => {
+    if (!deleteTargetUser) return;
+    setDeletingUser(true);
     try {
-      await api.delete(`/admin/users/${id}`);
-      showToast('User has been successfully deleted.', 'success');
+      await api.delete(`/admin/users/${deleteTargetUser._id}`);
+      showToast(`User @${deleteTargetUser.username} and all associated records deleted successfully.`, 'success');
+      setIsDeleteModalOpen(false);
+      setDeleteTargetUser(null);
       fetchUsers();
     } catch (err: any) {
       showToast(err.message || 'Error deleting user.', 'error');
+    } finally {
+      setDeletingUser(false);
     }
   };
 
   // Bulk Deletion
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedUserIds.length === 0) return;
-    if (!window.confirm(`Are you sure you want to delete ${selectedUserIds.length} selected users? This action cannot be undone.`)) return;
+    setIsBulkDeleteModalOpen(true);
+  };
 
+  const confirmBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+    setDeletingUser(true);
     try {
       await Promise.all(selectedUserIds.map((id) => api.delete(`/admin/users/${id}`)));
-      showToast(`${selectedUserIds.length} users deleted successfully.`, 'success');
+      showToast(`${selectedUserIds.length} users and all associated records deleted successfully.`, 'success');
       setSelectedUserIds([]);
+      setIsBulkDeleteModalOpen(false);
       fetchUsers();
     } catch (err: any) {
       showToast('Error performing bulk deletion.', 'error');
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -668,7 +691,7 @@ export default function UsersAdminPage() {
                             <Edit3 size={15} />
                           </button>
                           <button
-                            onClick={() => handleDeleteUser(user._id)}
+                            onClick={() => handleDeleteUser(user)}
                             className="p-2 text-slate-450 hover:text-red-655 hover:bg-red-50 rounded transition-colors cursor-pointer"
                             title="Delete Client"
                           >
@@ -1464,6 +1487,102 @@ export default function UsersAdminPage() {
                 }`}
               >
                 {togglingSuspension ? 'Processing...' : suspensionTargetUser.suspended ? 'Remove Suspension & Activate' : 'Confirm Suspension'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Warning Modal: Single User Delete */}
+      {isDeleteModalOpen && deleteTargetUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[99] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-red-100 w-full max-w-md overflow-hidden animate-slideIn p-6 sm:p-8 flex flex-col gap-6 relative">
+            <button 
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="p-3.5 rounded-full bg-red-100 text-red-600 border border-red-200 animate-pulse">
+                <AlertTriangle size={34} />
+              </div>
+              
+              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">
+                Delete Account & Purge Data?
+              </h3>
+              
+              <p className="text-xs text-slate-600 font-light leading-relaxed">
+                Are you sure you want to permanently delete client account <span className="font-bold text-slate-900">@{deleteTargetUser.username}</span> ({deleteTargetUser.fullName || 'User'})? 
+                <br /><br />
+                <span className="text-red-600 font-semibold">Warning:</span> All associated multi-currency balances, transactions, cards, and notification records will be permanently purged. <span className="font-bold text-slate-900">This action cannot be undone.</span>
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingUser}
+                onClick={confirmDeleteUser}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {deletingUser ? 'Deleting...' : 'Confirm & Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Warning Modal: Bulk User Delete */}
+      {isBulkDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[99] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-red-100 w-full max-w-md overflow-hidden animate-slideIn p-6 sm:p-8 flex flex-col gap-6 relative">
+            <button 
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="p-3.5 rounded-full bg-red-100 text-red-600 border border-red-200 animate-pulse">
+                <AlertTriangle size={34} />
+              </div>
+              
+              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">
+                Delete {selectedUserIds.length} Selected Accounts?
+              </h3>
+              
+              <p className="text-xs text-slate-600 font-light leading-relaxed">
+                Are you sure you want to permanently delete <span className="font-bold text-slate-900">{selectedUserIds.length} selected client accounts</span>?
+                <br /><br />
+                <span className="text-red-600 font-semibold">Warning:</span> All associated balances, transactions, cards, and notification records will be purged. <span className="font-bold text-slate-900">This action cannot be undone.</span>
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button
+                type="button"
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingUser}
+                onClick={confirmBulkDelete}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {deletingUser ? 'Deleting...' : 'Confirm Bulk Delete'}
               </button>
             </div>
           </div>
