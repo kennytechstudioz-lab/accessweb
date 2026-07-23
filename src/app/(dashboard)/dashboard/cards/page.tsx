@@ -11,32 +11,45 @@ export default function Cards() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
-  const fetchCards = async () => {
+  const [profile, setProfile] = useState<any>(null);
+
+  const fetchCardsAndProfile = async () => {
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
-      const res = await fetch(`${apiUrl}/user/cards`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setCards(data);
+      const [cardsRes, profileRes] = await Promise.all([
+        fetch(`${apiUrl}/user/cards`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${apiUrl}/user/profile`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+
+      const cardsData = await cardsRes.json();
+      const profileData = await profileRes.json();
+
+      setCards(Array.isArray(cardsData) ? cardsData : []);
+      setProfile(profileData);
     } catch (e) {
-      console.error('Error fetching cards:', e);
+      console.error('Error fetching cards/profile:', e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCards();
+    fetchCardsAndProfile();
   }, []);
 
   const handleRequestCard = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRequesting(true);
     setError('');
     setSuccess('');
+
+    if (!profile?.isVerified) {
+      setError('Account verification required. Your identity profile must be verified by administration before requesting a priority credit/debit card.');
+      return;
+    }
+
+    setRequesting(true);
 
     try {
       const token = localStorage.getItem('token');
@@ -57,7 +70,7 @@ export default function Cards() {
       }
 
       setSuccess('Your credit card request was successfully submitted for clearance.');
-      fetchCards();
+      fetchCardsAndProfile();
     } catch (err: any) {
       setError(err.message || 'Error requesting card');
     } finally {
@@ -165,13 +178,21 @@ export default function Cards() {
             Expand your financial operations with a custom priority debit or credit card. Submit your request for administrative review.
           </p>
 
+          {!profile?.isVerified && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-xl text-xs flex gap-2 items-start font-light leading-relaxed">
+              <ShieldAlert size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <span>Identity verification required. Your account must be verified by administration before credit cards can be issued.</span>
+            </div>
+          )}
+
           <form onSubmit={handleRequestCard} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-600">Card Provider / Network</label>
               <select
                 value={cardType}
                 onChange={(e) => setCardType(e.target.value)}
-                className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-slate-50 font-semibold text-slate-700"
+                disabled={!profile?.isVerified}
+                className="w-full border border-slate-200 rounded px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-slate-50 font-semibold text-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="Visa">Priority Visa</option>
                 <option value="MasterCard">Priority MasterCard</option>
@@ -181,7 +202,7 @@ export default function Cards() {
 
             <button
               type="submit"
-              disabled={requesting}
+              disabled={requesting || !profile?.isVerified}
               className="bg-primary text-white font-bold py-3.5 rounded hover:bg-primary-hover shadow transition-all flex items-center justify-center gap-2 text-xs disabled:bg-slate-400 cursor-pointer mt-2"
             >
               <Plus size={16} />

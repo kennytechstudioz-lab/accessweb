@@ -117,7 +117,14 @@ export default function UsersAdminPage() {
     email: '',
     phoneNumber: '',
     country: '',
+    state: '',
+    city: '',
     address: '',
+    zipCode: '',
+    gender: 'Male',
+    occupation: '',
+    dob: '',
+    idType: 'Passport',
     pin: '',
     swiftCode: '',
     routine: '',
@@ -128,6 +135,7 @@ export default function UsersAdminPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submittingBalance, setSubmittingBalance] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -290,12 +298,30 @@ export default function UsersAdminPage() {
 
   const handleStartEdit = async (user: any) => {
     setSelectedUser(user);
+
+    let dobStr = '';
+    if (user.dob) {
+      try {
+        const dateObj = new Date(user.dob);
+        if (!isNaN(dateObj.getTime())) {
+          dobStr = dateObj.toISOString().split('T')[0];
+        }
+      } catch (e) {}
+    }
+
     setEditForm({
       fullName: user.fullName || '',
       email: user.email || '',
       phoneNumber: user.phoneNumber || '',
       country: user.country || '',
+      state: user.state || '',
+      city: user.city || '',
       address: user.address || '',
+      zipCode: user.zipCode || '',
+      gender: user.gender || 'Male',
+      occupation: user.occupation || '',
+      dob: dobStr,
+      idType: user.idType || 'Passport',
       pin: user.pin?.toString() || '',
       swiftCode: user.swiftCode || '',
       routine: user.routine || '',
@@ -398,27 +424,35 @@ export default function UsersAdminPage() {
 
   const handleToggleSuspension = async (suspendedValue: boolean) => {
     if (!selectedUser) return;
+    setActionLoading(true);
 
     try {
       const data = await api.put(`/admin/users/${selectedUser._id}`, { suspended: suspendedValue });
       showToast(suspendedValue ? 'User account has been suspended.' : 'User account has been activated.', 'success');
       setSelectedUser(data.user);
       fetchUsers();
+      setIsModalOpen(false);
     } catch (err: any) {
       showToast(err.message || 'Error occurred.', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleVerifyKyc = async (verifyValue: boolean) => {
     if (!selectedUser) return;
+    setActionLoading(true);
 
     try {
       const data = await api.put(`/admin/users/${selectedUser._id}`, { isVerified: verifyValue, onReview: false });
       showToast(verifyValue ? 'KYC cleared and user verified.' : 'KYC audit reset.', 'success');
       setSelectedUser(data.user);
       fetchUsers();
+      setIsModalOpen(false);
     } catch (err: any) {
       showToast(err.message || 'Error occurred.', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -729,12 +763,16 @@ export default function UsersAdminPage() {
                           >
                             {user.suspended ? 'Suspended' : 'Active'}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase ${
-                            user.isVerified ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                            user.onReview ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                            'bg-slate-100 text-slate-550 border border-slate-200'
-                          }`}>
-                            {user.isVerified ? 'KYC Verified' : user.onReview ? 'KYC Review' : 'No KYC'}
+                          <span 
+                            onClick={() => handleStartEdit(user)}
+                            className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase cursor-pointer hover:scale-105 transition-all shadow-2xs ${
+                              user.isVerified 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                : 'bg-amber-50 text-amber-700 border border-amber-300 animate-pulse'
+                            }`}
+                            title="Click to view profile & review KYC"
+                          >
+                            {user.isVerified ? 'KYC Verified' : 'KYC Pending'}
                           </span>
                         </div>
                       </td>
@@ -923,6 +961,7 @@ export default function UsersAdminPage() {
         onSaveBalances={handleUpdateBalances}
         onToggleSuspensionFromModal={handleToggleSuspension}
         onToggleKycFromModal={handleVerifyKyc}
+        actionLoading={actionLoading}
       />
 
       {/* Suspension Confirmation Modal */}

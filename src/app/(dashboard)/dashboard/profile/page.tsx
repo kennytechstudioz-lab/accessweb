@@ -312,56 +312,106 @@ export default function UserProfilePage() {
               </h3>
             </div>
 
-            <form onSubmit={handleSubmitKyc} className="flex flex-col gap-4">
-              
-              {/* Select ID Card Type */}
-              <div className="flex flex-col gap-1.5 text-xs">
-                <label className="font-bold text-slate-700 uppercase text-[10px]">Select ID Card Type</label>
-                <select
-                  value={idType}
-                  onChange={(e) => setIdType(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary font-semibold text-xs cursor-pointer"
-                >
-                  <option value="Passport">International Passport</option>
-                  <option value="Drivers License">Driver's License</option>
-                  <option value="Voters Card">Voter's Card</option>
-                </select>
-              </div>
-
-              {/* Upload ID Card Document Box */}
-              <div className="flex flex-col gap-1.5 text-xs">
-                <label className="font-bold text-slate-700 uppercase text-[10px]">Upload Document / ID Card</label>
-                
-                <div className="border-2 border-dashed border-slate-200 hover:border-primary/40 rounded-xl p-5 text-center flex flex-col items-center gap-2 transition-colors cursor-pointer relative bg-slate-50">
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={handleIdCardUpload}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                  <UploadCloud size={30} className="text-slate-400" />
-                  <span className="text-xs font-bold text-slate-700">Click or drag ID Card image</span>
-                  <span className="text-[10px] text-slate-400">Supports JPEG, PNG or PDF (Max 5MB)</span>
-
-                  {idCardFileName && (
-                    <div className="mt-1 bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold px-3 py-1 rounded-full truncate max-w-full">
-                      File: {idCardFileName}
-                    </div>
-                  )}
+            {profile?.isVerified ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex flex-col items-center gap-3 text-center">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle size={28} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className="text-sm font-extrabold text-emerald-900 uppercase tracking-tight">Identity Cleared & Verified</h4>
+                  <p className="text-xs text-emerald-700 leading-relaxed font-light">
+                    Your identity clearance document ({profile?.idType || 'Passport'}) has been audited and approved by bank administration. Verification forms are locked.
+                  </p>
+                </div>
+                {profile?.passport && (
+                  <div className="w-full h-32 rounded-lg border border-emerald-200 overflow-hidden mt-1">
+                    <img src={profile.passport} alt="Verified ID" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="mt-1 bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  <Lock size={12} />
+                  <span>Immutable Verification Record</span>
                 </div>
               </div>
+            ) : (
+              <form onSubmit={handleSubmitKyc} className="flex flex-col gap-4">
+                
+                {/* Select ID Card Type */}
+                <div className="flex flex-col gap-1.5 text-xs">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Select ID Card Type</label>
+                  <select
+                    value={idType}
+                    onChange={(e) => setIdType(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary font-semibold text-xs cursor-pointer"
+                  >
+                    <option value="Passport">International Passport</option>
+                    <option value="Drivers License">Driver's License</option>
+                    <option value="Voters Card">Voter's Card</option>
+                  </select>
+                </div>
 
-              {/* Submit KYC Button */}
-              <button
-                type="submit"
-                disabled={submittingKyc}
-                className="w-full py-3 bg-primary hover:bg-red-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-400"
-              >
-                <ShieldCheck size={16} />
-                <span>{submittingKyc ? 'Uploading Document...' : 'Submit Identity Clearance'}</span>
-              </button>
+                {/* Upload ID Card Document Box */}
+                <div className="flex flex-col gap-1.5 text-xs">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Upload Document / ID Card</label>
+                  
+                  <div className="border-2 border-dashed border-slate-200 hover:border-primary/50 rounded-xl p-4 text-center flex flex-col items-center justify-center min-h-[160px] transition-all cursor-pointer relative bg-slate-50 overflow-hidden group">
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={handleIdCardUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    />
+                    
+                    {(idCardFile || profile?.passport) ? (
+                      <div className="relative w-full h-36 flex flex-col items-center justify-center overflow-hidden rounded-lg">
+                        {((idCardFile || profile?.passport).startsWith('data:image') || (idCardFile || profile?.passport).startsWith('http') || (idCardFile || profile?.passport).length > 200) ? (
+                          <img 
+                            src={idCardFile || profile?.passport} 
+                            alt="ID Card Preview" 
+                            className="w-full h-full object-cover rounded-lg border border-slate-200 shadow-xs" 
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 p-4 bg-white border border-slate-200 rounded-lg w-full">
+                            <FileText size={32} className="text-primary" />
+                            <span className="font-bold text-xs text-slate-800 truncate max-w-full">
+                              {idCardFileName || 'ID Document Uploaded'}
+                            </span>
+                          </div>
+                        )}
 
-            </form>
+                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white p-2 rounded-lg">
+                          <Camera size={22} />
+                          <span className="text-[11px] font-bold">Click to Change ID Image</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <UploadCloud size={32} className="text-slate-400 group-hover:text-primary transition-colors" />
+                        <span className="text-xs font-bold text-slate-700">Click or drag ID Card image</span>
+                        <span className="text-[10px] text-slate-400">Supports JPEG, PNG or PDF (Max 5MB)</span>
+                      </div>
+                    )}
+
+                    {idCardFileName && (
+                      <div className="mt-2 bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold px-3 py-1 rounded-full truncate max-w-full">
+                        Selected: {idCardFileName}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Submit KYC Button */}
+                <button
+                  type="submit"
+                  disabled={submittingKyc}
+                  className="w-full py-3 bg-primary hover:bg-red-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-400"
+                >
+                  <ShieldCheck size={16} />
+                  <span>{submittingKyc ? 'Uploading Document...' : 'Submit Identity Clearance'}</span>
+                </button>
+
+              </form>
+            )}
           </div>
 
         </div>
@@ -420,8 +470,9 @@ export default function UserProfilePage() {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="John Doe"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -432,8 +483,9 @@ export default function UserProfilePage() {
                   type="text"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="+1 (555) 000-0000"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -444,7 +496,8 @@ export default function UserProfilePage() {
                   type="date"
                   value={dob}
                   onChange={(e) => setDob(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  disabled={profile?.isVerified}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -454,7 +507,8 @@ export default function UserProfilePage() {
                 <select
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs cursor-pointer"
+                  disabled={profile?.isVerified}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs cursor-pointer disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -469,8 +523,9 @@ export default function UserProfilePage() {
                   type="text"
                   value={occupation}
                   onChange={(e) => setOccupation(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="Software Engineer / Business Executive"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -481,8 +536,9 @@ export default function UserProfilePage() {
                   type="text"
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="United States"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -493,8 +549,9 @@ export default function UserProfilePage() {
                   type="text"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="California"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -505,8 +562,9 @@ export default function UserProfilePage() {
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="Los Angeles"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -517,8 +575,9 @@ export default function UserProfilePage() {
                   type="text"
                   value={zipCode}
                   onChange={(e) => setZipCode(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="90001"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -529,24 +588,34 @@ export default function UserProfilePage() {
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
+                  disabled={profile?.isVerified}
                   placeholder="123 Financial Way, Suite 400"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-primary text-xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
             </div>
 
-            {/* Save Profile Button */}
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="px-6 py-3 bg-primary hover:bg-red-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:bg-slate-400"
-              >
-                <Save size={16} />
-                <span>{savingProfile ? 'Saving Changes...' : 'Save Profile Changes'}</span>
-              </button>
-            </div>
+            {/* Save Profile Button - Only visible when NOT verified */}
+            {!profile?.isVerified ? (
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="px-6 py-3 bg-primary hover:bg-red-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:bg-slate-400"
+                >
+                  <Save size={16} />
+                  <span>{savingProfile ? 'Saving Changes...' : 'Save Profile Changes'}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 font-bold">
+                  <ShieldCheck size={16} className="text-emerald-600 flex-shrink-0" />
+                  <span>Identity Clearance Approved & Verified — Profile Record is Immutable</span>
+                </div>
+              </div>
+            )}
 
           </form>
 
