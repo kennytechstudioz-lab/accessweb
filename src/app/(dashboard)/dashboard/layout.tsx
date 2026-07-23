@@ -34,13 +34,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { message, type, hideToast } = useToastStore();
-  const { fetchNotifications, getUnreadCount } = useNotificationsStore();
+  const { notifications, fetchNotifications } = useNotificationsStore();
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    if (currentUser) {
+      fetchNotifications();
+    }
+  }, [fetchNotifications, currentUser]);
 
-  const unreadCount = getUnreadCount();
+  const unreadCount = notifications.filter((n) => !n.isRead && n.status !== 'read').length;
 
   useEffect(() => {
     const token = localStorage.getItem('token');

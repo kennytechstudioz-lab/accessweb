@@ -13,6 +13,7 @@ export default function UserSettingsPage() {
   // PIN state
   const [pin, setPinState] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [pinPassword, setPinPassword] = useState('');
   const [savingPin, setSavingPin] = useState(false);
 
   // Password state
@@ -50,12 +51,16 @@ export default function UserSettingsPage() {
   // Save Transaction PIN
   const handleSavePin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin.length < 4) {
-      showToast('Transaction PIN must be at least 4 digits.', 'error');
+    if (pin.length !== 6) {
+      showToast('Transaction PIN must be exactly 6 digits.', 'error');
       return;
     }
     if (pin !== confirmPin) {
       showToast('PIN confirmation does not match.', 'error');
+      return;
+    }
+    if (profile?.pin && !pinPassword) {
+      showToast('Password is required to update PIN.', 'error');
       return;
     }
 
@@ -70,7 +75,7 @@ export default function UserSettingsPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({ pin, password: pinPassword }),
       });
 
       const data = await res.json();
@@ -79,6 +84,7 @@ export default function UserSettingsPage() {
       showToast('Transaction PIN saved successfully!', 'success');
       setPinState('');
       setConfirmPin('');
+      setPinPassword('');
       fetchSettingsData();
     } catch (err: any) {
       showToast(err.message || 'Error setting PIN', 'error');
@@ -184,31 +190,45 @@ export default function UserSettingsPage() {
 
             <form onSubmit={handleSavePin} className="flex flex-col gap-4">
               <p className="text-xs text-slate-500 font-light leading-relaxed">
-                Your 4-digit PIN is required to authorize all outbound money transfers and card requests.
+                Your 6-digit PIN is required to authorize all outbound money transfers and card requests.
               </p>
 
+              {profile?.pin ? (
+                <div className="flex flex-col gap-1.5 text-xs">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Account Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={pinPassword}
+                    onChange={(e) => setPinPassword(e.target.value)}
+                    placeholder="Enter your login password"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-xs font-mono font-bold tracking-widest focus:outline-none focus:border-primary text-slate-800"
+                  />
+                </div>
+              ) : null}
+
               <div className="flex flex-col gap-1.5 text-xs">
-                <label className="font-bold text-slate-700 uppercase text-[10px]">New 4-Digit PIN</label>
+                <label className="font-bold text-slate-700 uppercase text-[10px]">New 6-Digit PIN</label>
                 <input
                   type="password"
                   required
                   maxLength={6}
                   value={pin}
                   onChange={(e) => setPinState(e.target.value)}
-                  placeholder="Enter 4-digit PIN"
+                  placeholder="Enter 6-digit PIN"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-xs font-mono font-bold tracking-widest focus:outline-none focus:border-primary text-slate-800"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5 text-xs">
-                <label className="font-bold text-slate-700 uppercase text-[10px]">Confirm 4-Digit PIN</label>
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Confirm 6-Digit PIN</label>
                 <input
                   type="password"
                   required
                   maxLength={6}
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value)}
-                  placeholder="Re-enter 4-digit PIN"
+                  placeholder="Re-enter 6-digit PIN"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-xs font-mono font-bold tracking-widest focus:outline-none focus:border-primary text-slate-800"
                 />
               </div>

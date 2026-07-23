@@ -47,6 +47,24 @@ export default function WebSocketListener({ role, username }: { role?: string; u
             } else if (data.type === 'KYC_PROCESSING') {
               showToast(`🛡️ KYC Verification Under Review: Your ${data.idType} document is being audited.`, 'success');
               fetchNotifications();
+            } else if (data.type === 'USER_TRANSFER') {
+              showToast(`💸 ${data.title}: ${data.content}`, 'success');
+              fetchNotifications();
+            } else if (data.type === 'TAC_REQUEST') {
+              showToast(`🔑 ${data.title}: ${data.fullName} requested TAC clearance`, 'success');
+              fetchNotifications();
+            } else if (data.type === 'TAC_PROCESSING') {
+              showToast(`⏳ ${data.title}: ${data.content}`, 'success');
+              fetchNotifications();
+            } else if (data.type === 'TAC_APPROVED') {
+              showToast(`🔑 ${data.title}: ${data.content}`, 'success');
+              fetchNotifications();
+            } else if (data.type === 'TRANSFER_PROCESSING') {
+              showToast(`⏳ ${data.title}: ${data.content}`, 'success');
+              fetchNotifications();
+            } else if (data.type === 'TRANSFER_PENDING_ADMIN') {
+              showToast(`🔔 ${data.title}: ${data.content}`, 'success');
+              fetchNotifications();
             }
           } catch (e) {
             console.error('Error handling WebSocket message:', e);

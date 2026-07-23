@@ -20,11 +20,19 @@ import {
   Sparkles,
   UserCheck,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  Key
 } from 'lucide-react';
 import { useUsersStore } from '@/store/usersStore';
 import { useToastStore } from '@/store/toastStore';
 import { api } from '@/util/api';
+import AdminTacModal from '@/components/modals/AdminTacModal';
+import BulkEmailModal from '@/components/modals/BulkEmailModal';
+import BulkNotifModal from '@/components/modals/BulkNotifModal';
+import InjectTxModal from '@/components/modals/InjectTxModal';
+import SuspensionConfirmModal from '@/components/modals/SuspensionConfirmModal';
+import DeleteUserModal from '@/components/modals/DeleteUserModal';
+import UserDetailModal from '@/components/modals/UserDetailModal';
 
 export default function UsersAdminPage() {
   const { users, loading, fetchUsers } = useUsersStore();
@@ -83,6 +91,12 @@ export default function UsersAdminPage() {
     title: '',
     message: '',
   });
+
+  // Admin TAC Code Modal state
+  const [isTacModalOpen, setIsTacModalOpen] = useState(false);
+  const [tacTargetUser, setTacTargetUser] = useState<any>(null);
+  const [adminTacCode, setAdminTacCode] = useState('');
+  const [savingTacCode, setSavingTacCode] = useState(false);
 
   const [txForm, setTxForm] = useState({
     username: '',
@@ -540,6 +554,56 @@ export default function UsersAdminPage() {
     }
   };
 
+  // Open TAC Code Modal for Single User
+  const handleOpenTacModalForUser = (user: any) => {
+    setTacTargetUser(user);
+    setAdminTacCode(user.tacCode || '');
+    setIsTacModalOpen(true);
+  };
+
+  // Open TAC Code Modal for Bulk Selected Users
+  const handleOpenTacModalBulk = () => {
+    const targetUsers = users.filter((u) => selectedUserIds.includes(u._id));
+    if (targetUsers.length > 0) {
+      setTacTargetUser(targetUsers[0]);
+      setAdminTacCode(targetUsers[0].tacCode || '');
+    }
+    setIsTacModalOpen(true);
+  };
+
+  // Save TAC Code & Dispatch Approval Notification
+  const handleSaveTacCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminTacCode.trim()) {
+      showToast('Please enter a valid TAC clearance code.', 'error');
+      return;
+    }
+
+    setSavingTacCode(true);
+    try {
+      const targetUsers = tacTargetUser && !selectedUserIds.includes(tacTargetUser._id)
+        ? [tacTargetUser]
+        : users.filter((u) => selectedUserIds.includes(u._id));
+
+      const userList = targetUsers.length > 0 ? targetUsers : (tacTargetUser ? [tacTargetUser] : []);
+
+      for (const u of userList) {
+        await api.put(`/admin/users/${u._id}`, { tacCode: adminTacCode.trim() });
+      }
+
+      showToast(`TAC Code ${adminTacCode.trim()} set and approval notification dispatched to ${userList.length} client(s).`, 'success');
+      setIsTacModalOpen(false);
+      setAdminTacCode('');
+      setTacTargetUser(null);
+      setSelectedUserIds([]);
+      fetchUsers();
+    } catch (err: any) {
+      showToast(err.message || 'Error saving TAC code.', 'error');
+    } finally {
+      setSavingTacCode(false);
+    }
+  };
+
   if (loading && users.length === 0) {
     return (
       <div className="flex h-[50vh] items-center justify-center bg-slate-100 text-slate-800">
@@ -684,6 +748,13 @@ export default function UsersAdminPage() {
                             <ArrowRightLeft size={15} />
                           </button>
                           <button
+                            onClick={() => handleOpenTacModalForUser(user)}
+                            className="p-2 text-slate-450 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                            title="Set / Approve TAC Code"
+                          >
+                            <Key size={15} />
+                          </button>
+                          <button
                             onClick={() => handleStartEdit(user)}
                             className="p-2 text-slate-450 hover:text-primary hover:bg-red-50 rounded transition-colors cursor-pointer"
                             title="Edit / Audit Account"
@@ -779,6 +850,14 @@ export default function UsersAdminPage() {
             </button>
 
             <button
+              onClick={handleOpenTacModalBulk}
+              className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 hover:text-white rounded-xl transition-all cursor-pointer shadow flex items-center justify-center"
+              title="Set/Approve TAC Code for Selected User(s)"
+            >
+              <Key size={18} />
+            </button>
+
+            <button
               onClick={handleBulkDelete}
               className="p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all cursor-pointer shadow-lg shadow-red-900/40 flex items-center justify-center"
               title="Delete Selected Users"
@@ -789,805 +868,96 @@ export default function UsersAdminPage() {
         </div>
       )}
 
-      {/* Bulk Send Email Modal Dialog (Lists DB Templates) */}
-      {isEmailModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-slideIn">
-            
-            {/* Header */}
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Mail size={18} className="text-primary" />
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Select Email Template ({selectedUserIds.length} Recipients)
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsEmailModalOpen(false)}
-                className="text-slate-400 hover:text-slate-650 cursor-pointer p-1 rounded-full hover:bg-slate-200"
-              >
-                <X size={18} />
-              </button>
-            </div>
+      {/* Bulk Send Email Modal Dialog */}
+      <BulkEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        onSubmit={handleSendBulkEmail}
+        selectedUserCount={selectedUserIds.length}
+        loadingDbEmails={loadingDbEmails}
+        dbEmailTemplates={dbEmailTemplates}
+        selectedEmailTplId={selectedEmailTplId}
+        onSelectTemplate={handleSelectEmailTemplate}
+        emailForm={emailForm}
+        setEmailForm={setEmailForm}
+        sendingBulkEmail={sendingBulkEmail}
+      />
 
-            {/* Form & DB Templates List */}
-            <form onSubmit={handleSendBulkEmail}>
-              <div className="p-6 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
-                
-                {/* DB Email Templates Cards Selection */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold text-slate-550 uppercase tracking-wider flex items-center justify-between">
-                    <span>Database Email Templates</span>
-                    {loadingDbEmails && <span className="text-primary animate-pulse">Loading templates...</span>}
-                  </label>
+      {/* Bulk Send Notification Modal Dialog */}
+      <BulkNotifModal
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+        onSubmit={handleSendBulkNotif}
+        selectedUserCount={selectedUserIds.length}
+        loadingDbNotifs={loadingDbNotifs}
+        dbNotifTemplates={dbNotifTemplates}
+        selectedNotifTplId={selectedNotifTplId}
+        onSelectTemplate={handleSelectNotifTemplate}
+        notifForm={notifForm}
+        setNotifForm={setNotifForm}
+        sendingBulkNotif={sendingBulkNotif}
+      />
 
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {dbEmailTemplates.map((tpl) => {
-                      const isSelected = selectedEmailTplId === tpl._id;
-                      return (
-                        <div
-                          key={tpl._id}
-                          onClick={() => handleSelectEmailTemplate(tpl)}
-                          className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
-                            isSelected
-                              ? 'bg-red-50/60 border-primary shadow-sm'
-                              : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                              <FileText size={14} className={isSelected ? 'text-primary' : 'text-slate-400'} />
-                              <span>{tpl.name || tpl.title}</span>
-                            </span>
-                            {isSelected && <span className="bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Selected</span>}
-                          </div>
-                          <p className="text-[11px] text-slate-600 font-mono line-clamp-2 leading-relaxed">
-                            {tpl.content || tpl.title}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+      {/* Manual Custom Transaction Injection Modal */}
+      <InjectTxModal
+        isOpen={isTxModalOpen}
+        onClose={() => setIsTxModalOpen(false)}
+        onSubmit={handleCreateTransaction}
+        selectedTxUser={selectedTxUser}
+        txForm={txForm}
+        setTxForm={setTxForm}
+        submittingTx={submittingTx}
+      />
 
-                <hr className="border-slate-100" />
+      {/* Edit / Audit User Details & Balances Modal */}
+      <UserDetailModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        selectedUser={selectedUser}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        selectedUserAccounts={selectedUserAccounts}
+        accountBalances={accountBalances}
+        setAccountBalances={setAccountBalances}
+        onSaveDetails={handleUpdateUserDetails}
+        onSaveBalances={handleUpdateBalances}
+        onToggleSuspensionFromModal={handleToggleSuspension}
+        onToggleKycFromModal={handleVerifyKyc}
+      />
 
-                {/* Email Subject Preview & Edit */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Email Subject</label>
-                  <input
-                    type="text"
-                    required
-                    value={emailForm.subject}
-                    onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
-                    className="border border-slate-200 rounded px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
+      {/* Suspension Confirmation Modal */}
+      <SuspensionConfirmModal
+        isOpen={isSuspensionModalOpen}
+        onClose={() => setIsSuspensionModalOpen(false)}
+        onConfirm={handleConfirmToggleSuspension}
+        targetUser={suspensionTargetUser}
+        togglingSuspension={togglingSuspension}
+      />
 
-                {/* Email Content Preview & Edit */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Email Body / Content</label>
-                  <textarea
-                    rows={5}
-                    required
-                    value={emailForm.content}
-                    onChange={(e) => setEmailForm({ ...emailForm, content: e.target.value })}
-                    className="border border-slate-200 rounded p-3 text-xs text-slate-800 focus:outline-none focus:border-primary font-mono leading-relaxed"
-                  />
-                </div>
+      {/* Single & Bulk User Delete Warning Modal */}
+      <DeleteUserModal
+        isSingleOpen={isDeleteModalOpen}
+        isBulkOpen={isBulkDeleteModalOpen}
+        onCloseSingle={() => setIsDeleteModalOpen(false)}
+        onCloseBulk={() => setIsBulkDeleteModalOpen(false)}
+        onConfirmSingle={confirmDeleteUser}
+        onConfirmBulk={confirmBulkDelete}
+        deleteTargetUser={deleteTargetUser}
+        selectedUserCount={selectedUserIds.length}
+        deletingUser={deletingUser}
+      />
 
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsEmailModalOpen(false)}
-                  className="px-4 py-2 rounded border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={sendingBulkEmail}
-                  className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-5 py-2 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Send size={14} />
-                  <span>{sendingBulkEmail ? 'Dispatching...' : `Send Email to ${selectedUserIds.length} Selected`}</span>
-                </button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Send Notification Modal Dialog (Lists DB Templates) */}
-      {isNotifModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-slideIn">
-            
-            {/* Header */}
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Bell size={18} className="text-amber-500" />
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                  Select Notification Template ({selectedUserIds.length} Recipients)
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsNotifModalOpen(false)}
-                className="text-slate-400 hover:text-slate-650 cursor-pointer p-1 rounded-full hover:bg-slate-200"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Form & DB Templates List */}
-            <form onSubmit={handleSendBulkNotif}>
-              <div className="p-6 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
-                
-                {/* DB Notification Templates Cards Selection */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-extrabold text-slate-555 uppercase tracking-wider flex items-center justify-between">
-                    <span>Database Notification Templates</span>
-                    {loadingDbNotifs && <span className="text-amber-600 animate-pulse">Loading templates...</span>}
-                  </label>
-
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {dbNotifTemplates.map((tpl) => {
-                      const isSelected = selectedNotifTplId === tpl._id;
-                      return (
-                        <div
-                          key={tpl._id}
-                          onClick={() => handleSelectNotifTemplate(tpl)}
-                          className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
-                            isSelected
-                              ? 'bg-amber-50/60 border-amber-500 shadow-sm'
-                              : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                              <Bell size={14} className={isSelected ? 'text-amber-600' : 'text-slate-400'} />
-                              <span>{tpl.name || tpl.title}</span>
-                            </span>
-                            {isSelected && <span className="bg-amber-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Selected</span>}
-                          </div>
-                          <p className="text-[11px] text-slate-600 font-sans line-clamp-2 leading-relaxed">
-                            {tpl.content || tpl.message || tpl.title}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <hr className="border-slate-100" />
-
-                {/* Title */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Notification Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={notifForm.title}
-                    onChange={(e) => setNotifForm({ ...notifForm, title: e.target.value })}
-                    className="border border-slate-200 rounded px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
-                  />
-                </div>
-
-                {/* Message */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Notification Message</label>
-                  <textarea
-                    rows={4}
-                    required
-                    value={notifForm.message}
-                    onChange={(e) => setNotifForm({ ...notifForm, message: e.target.value })}
-                    className="border border-slate-200 rounded p-3 text-xs text-slate-800 focus:outline-none focus:border-primary font-sans leading-relaxed"
-                  />
-                </div>
-
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsNotifModalOpen(false)}
-                  className="px-4 py-2 rounded border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={sendingBulkNotif}
-                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-5 py-2 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Bell size={14} />
-                  <span>{sendingBulkNotif ? 'Broadcasting...' : `Send Notification to ${selectedUserIds.length} Selected`}</span>
-                </button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
-
-      {/* Manual Custom Transaction injection Modal (for specific user) */}
-      {isTxModalOpen && selectedTxUser && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-slideIn">
-            
-            {/* Header */}
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <ArrowRightLeft size={18} className="text-primary animate-pulse" />
-                <span>Inject Transaction for @{selectedTxUser.username}</span>
-              </h3>
-              <button
-                onClick={() => setIsTxModalOpen(false)}
-                className="text-slate-400 hover:text-slate-655 cursor-pointer p-1 rounded-full hover:bg-slate-200 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleCreateTransaction}>
-              <div className="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Transaction Type</label>
-                    <select
-                      value={txForm.transactionType}
-                      onChange={(e) => setTxForm({ ...txForm, transactionType: e.target.value })}
-                      className="border border-slate-200 rounded px-2.5 py-2.5 text-xs bg-slate-50 text-slate-750 focus:outline-none focus:border-primary font-semibold"
-                    >
-                      <option value="Credit">Credit</option>
-                      <option value="Debit">Debit</option>
-                      <option value="Local-Transfer">Local Transfer</option>
-                      <option value="Domestic-Wire">Domestic Wire</option>
-                      <option value="International-Wire">International Wire</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Currency</label>
-                    <select
-                      value={txForm.currency}
-                      onChange={(e) => setTxForm({ ...txForm, currency: e.target.value })}
-                      className="border border-slate-200 rounded px-2.5 py-2.5 text-xs bg-slate-50 text-slate-750 focus:outline-none focus:border-primary font-semibold"
-                    >
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="GBP">GBP (£)</option>
-                      <option value="CAD">CAD ($)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Transaction Amount</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="0.00"
-                    value={txForm.amount}
-                    onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })}
-                    className="border border-slate-200 rounded px-3.5 py-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:border-primary font-mono font-bold"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Sender Name</label>
-                    <input
-                      type="text"
-                      value={txForm.senderName}
-                      onChange={(e) => setTxForm({ ...txForm, senderName: e.target.value })}
-                      placeholder="e.g. Bank Deposit Desk"
-                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Receiver Name</label>
-                    <input
-                      type="text"
-                      value={txForm.receiverName}
-                      onChange={(e) => setTxForm({ ...txForm, receiverName: e.target.value })}
-                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary font-semibold"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Receiver Bank Name</label>
-                    <input
-                      type="text"
-                      value={txForm.receiverBank}
-                      onChange={(e) => setTxForm({ ...txForm, receiverBank: e.target.value })}
-                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-650 uppercase">Receiver Acc Number</label>
-                    <input
-                      type="text"
-                      value={txForm.receiverAccountNumber}
-                      onChange={(e) => setTxForm({ ...txForm, receiverAccountNumber: e.target.value })}
-                      className="border border-slate-200 rounded px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-primary font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-650 uppercase">Description / Memo</label>
-                  <input
-                    type="text"
-                    required
-                    value={txForm.description}
-                    onChange={(e) => setTxForm({ ...txForm, description: e.target.value })}
-                    className="border border-slate-200 rounded px-3.5 py-2.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-              </div>
-
-              {/* Footer */}
-              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsTxModalOpen(false)}
-                  className="px-4 py-2.5 rounded border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingTx}
-                  className="bg-primary hover:bg-primary-hover text-white font-bold text-xs px-5 py-2.5 rounded shadow transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Send size={12} />
-                  <span>{submittingTx ? 'Processing...' : 'Create Entry'}</span>
-                </button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
-
-      {/* Edit User Modal Dialog overlay */}
-      {isModalOpen && selectedUser && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden animate-slideIn">
-            
-            {/* Modal Header */}
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm border border-primary/20">
-                  {selectedUser.fullName ? selectedUser.fullName[0] : selectedUser.username[0]}
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                    Audit User: {selectedUser.fullName || selectedUser.username}
-                  </h3>
-                  <span className="text-[9px] font-mono text-slate-400 mt-0.5">Username: @{selectedUser.username} | Account: {selectedUser.accountNumber}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-655 cursor-pointer p-1.5 rounded-full hover:bg-slate-200 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Body: Scrollable block */}
-            <div className="p-6 flex flex-col gap-6 max-h-[70vh] overflow-y-auto">
-              
-              {/* 1. Accounts & Balances (Top of Modal) */}
-              <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col gap-4">
-                <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider pb-2 border-b border-slate-200 flex items-center gap-1.5">
-                  <DollarSign size={14} className="text-primary" />
-                  <span>Ledger Accounts & Balances</span>
-                </h4>
-                
-                {selectedUserAccounts.length === 0 ? (
-                  <p className="text-slate-400 text-xs py-2 text-center font-light">No ledger wallets registered for this client.</p>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {selectedUserAccounts.map((acc) => (
-                        <div key={acc._id} className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col gap-2 shadow-sm">
-                          <div className="flex justify-between items-center text-xs font-bold text-slate-750">
-                            <span>{acc.currency} Wallet</span>
-                            <span className="font-mono text-slate-400 text-[10px]">Acc No: {acc.accountNumber || 'N/A'}</span>
-                          </div>
-                          
-                          <div className="relative">
-                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">
-                              {acc.symbol}
-                            </span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={accountBalances[acc.currency] ?? 0}
-                              onChange={(e) => setAccountBalances({ ...accountBalances, [acc.currency]: parseFloat(e.target.value) || 0 })}
-                              className="w-full border border-slate-200 rounded pl-7 pr-3 py-1.5 text-xs bg-slate-50 text-slate-800 focus:outline-none focus:border-primary font-mono font-bold"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <button
-                      type="button"
-                      disabled={submittingBalance}
-                      onClick={handleUpdateBalances}
-                      className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-5 py-2.5 rounded shadow self-end cursor-pointer disabled:bg-slate-200 transition-colors mt-2"
-                    >
-                      {submittingBalance ? 'Updating ledger balances...' : 'Update Ledger Balances'}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. Compliance Status Toggles */}
-              <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col gap-4">
-                <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider pb-2 border-b border-slate-200 flex items-center gap-1.5">
-                  <CheckSquare size={14} className="text-primary" />
-                  <span>Compliance & Account Status</span>
-                </h4>
-                
-                <div className="flex flex-wrap items-center gap-3">
-                  {!selectedUser.isVerified ? (
-                    <button
-                      onClick={() => handleVerifyKyc(true)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 shadow transition-colors cursor-pointer"
-                    >
-                      <CheckSquare size={14} />
-                      <span>Approve KYC Clearances</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleVerifyKyc(false)}
-                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <CheckSquare size={14} />
-                      <span>Revoke KYC Status</span>
-                    </button>
-                  )}
-
-                  {selectedUser.suspended ? (
-                    <button
-                      onClick={() => handleToggleSuspension(false)}
-                      className="bg-slate-100 hover:bg-slate-200 text-emerald-600 border border-slate-200 text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Check size={14} />
-                      <span>Activate User Account</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleToggleSuspension(true)}
-                      className="bg-red-50 hover:bg-red-100 text-red-650 border border-red-250 text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Ban size={14} />
-                      <span>Suspend User Account</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 3. Profile Credentials Form */}
-              <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col gap-4">
-                <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider pb-2 border-b border-slate-200 flex items-center gap-1.5">
-                  <Edit3 size={14} className="text-primary" />
-                  <span>Profile Specifications & Security Credentials</span>
-                </h4>
-
-                <form onSubmit={handleUpdateUserDetails} className="flex flex-col gap-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">Client Full Name</label>
-                      <input
-                        type="text"
-                        value={editForm.fullName}
-                        onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-semibold"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">Registered Email</label>
-                      <input
-                        type="email"
-                        value={editForm.email}
-                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">IBAN Specifications</label>
-                      <input
-                        type="text"
-                        value={editForm.iban}
-                        onChange={(e) => setEditForm({ ...editForm, iban: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-mono"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">SWIFT Code BIC</label>
-                      <input
-                        type="text"
-                        value={editForm.swiftCode}
-                        onChange={(e) => setEditForm({ ...editForm, swiftCode: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">Routing / Transit Code</label>
-                      <input
-                        type="text"
-                        value={editForm.routine}
-                        onChange={(e) => setEditForm({ ...editForm, routine: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-mono"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">Transaction Auth (TAC)</label>
-                      <input
-                        type="text"
-                        value={editForm.tacCode}
-                        onChange={(e) => setEditForm({ ...editForm, tacCode: e.target.value })}
-                        placeholder="e.g. 10293"
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-mono"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">IMF Clearance Code</label>
-                      <input
-                        type="text"
-                        value={editForm.imf}
-                        onChange={(e) => setEditForm({ ...editForm, imf: e.target.value })}
-                        placeholder="e.g. 50392"
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">Security Vault PIN</label>
-                      <input
-                        type="text"
-                        value={editForm.pin}
-                        onChange={(e) => setEditForm({ ...editForm, pin: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary font-mono"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">Country</label>
-                      <input
-                        type="text"
-                        value={editForm.country}
-                        onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase">Phone Number</label>
-                      <input
-                        type="text"
-                        value={editForm.phoneNumber}
-                        onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
-                        className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-555 uppercase">Address</label>
-                    <input
-                      type="text"
-                      value={editForm.address}
-                      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                      className="border border-slate-200 rounded px-4 py-2.5 text-xs bg-white text-slate-800 focus:outline-none focus:border-primary"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-6 py-3 rounded-lg shadow self-end cursor-pointer disabled:bg-slate-200 transition-colors mt-2"
-                  >
-                    {submitting ? 'Saving changes...' : 'Save Profile Credentials'}
-                  </button>
-                </form>
-              </div>
-
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                Close Audit
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* Suspension Toggle Confirmation Pop-up Modal */}
-      {isSuspensionModalOpen && suspensionTargetUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[99] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-slideIn p-6 sm:p-8 flex flex-col gap-6 relative">
-            <button 
-              onClick={() => setIsSuspensionModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex flex-col items-center text-center gap-3">
-              <div className={`p-3.5 rounded-full ${
-                suspensionTargetUser.suspended ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-              }`}>
-                {suspensionTargetUser.suspended ? <UserCheck size={32} /> : <Ban size={32} />}
-              </div>
-              
-              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">
-                {suspensionTargetUser.suspended ? 'Remove Account Suspension?' : 'Suspend Client Account?'}
-              </h3>
-              
-              <p className="text-xs text-slate-500 font-light leading-relaxed">
-                {suspensionTargetUser.suspended ? (
-                  <>
-                    Are you sure you want to remove the suspension for client <span className="font-bold text-slate-900">@{suspensionTargetUser.username}</span> ({suspensionTargetUser.fullName || 'User'})? The account will become active and regain transfer privileges.
-                  </>
-                ) : (
-                  <>
-                    Are you sure you want to suspend client account <span className="font-bold text-slate-900">@{suspensionTargetUser.username}</span> ({suspensionTargetUser.fullName || 'User'})? The client will be locked out of transfer and vault operations.
-                  </>
-                )}
-              </p>
-            </div>
-
-            <div className="flex gap-3 mt-2">
-              <button
-                type="button"
-                onClick={() => setIsSuspensionModalOpen(false)}
-                className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={togglingSuspension}
-                onClick={handleConfirmToggleSuspension}
-                className={`flex-1 py-3 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow transition-all cursor-pointer disabled:bg-slate-300 ${
-                  suspensionTargetUser.suspended ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
-                }`}
-              >
-                {togglingSuspension ? 'Processing...' : suspensionTargetUser.suspended ? 'Remove Suspension & Activate' : 'Confirm Suspension'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Warning Modal: Single User Delete */}
-      {isDeleteModalOpen && deleteTargetUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[99] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-red-100 w-full max-w-md overflow-hidden animate-slideIn p-6 sm:p-8 flex flex-col gap-6 relative">
-            <button 
-              onClick={() => setIsDeleteModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex flex-col items-center text-center gap-3">
-              <div className="p-3.5 rounded-full bg-red-100 text-red-600 border border-red-200 animate-pulse">
-                <AlertTriangle size={34} />
-              </div>
-              
-              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">
-                Delete Account & Purge Data?
-              </h3>
-              
-              <p className="text-xs text-slate-600 font-light leading-relaxed">
-                Are you sure you want to permanently delete client account <span className="font-bold text-slate-900">@{deleteTargetUser.username}</span> ({deleteTargetUser.fullName || 'User'})? 
-                <br /><br />
-                <span className="text-red-600 font-semibold">Warning:</span> All associated multi-currency balances, transactions, cards, and notification records will be permanently purged. <span className="font-bold text-slate-900">This action cannot be undone.</span>
-              </p>
-            </div>
-
-            <div className="flex gap-3 mt-2">
-              <button
-                type="button"
-                onClick={() => setIsDeleteModalOpen(false)}
-                className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deletingUser}
-                onClick={confirmDeleteUser}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                {deletingUser ? 'Deleting...' : 'Confirm & Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Warning Modal: Bulk User Delete */}
-      {isBulkDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[99] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl border border-red-100 w-full max-w-md overflow-hidden animate-slideIn p-6 sm:p-8 flex flex-col gap-6 relative">
-            <button 
-              onClick={() => setIsBulkDeleteModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex flex-col items-center text-center gap-3">
-              <div className="p-3.5 rounded-full bg-red-100 text-red-600 border border-red-200 animate-pulse">
-                <AlertTriangle size={34} />
-              </div>
-              
-              <h3 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">
-                Delete {selectedUserIds.length} Selected Accounts?
-              </h3>
-              
-              <p className="text-xs text-slate-600 font-light leading-relaxed">
-                Are you sure you want to permanently delete <span className="font-bold text-slate-900">{selectedUserIds.length} selected client accounts</span>?
-                <br /><br />
-                <span className="text-red-600 font-semibold">Warning:</span> All associated balances, transactions, cards, and notification records will be purged. <span className="font-bold text-slate-900">This action cannot be undone.</span>
-              </p>
-            </div>
-
-            <div className="flex gap-3 mt-2">
-              <button
-                type="button"
-                onClick={() => setIsBulkDeleteModalOpen(false)}
-                className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deletingUser}
-                onClick={confirmBulkDelete}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                {deletingUser ? 'Deleting...' : 'Confirm Bulk Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Admin Set / Approve TAC Code Modal */}
+      <AdminTacModal
+        isOpen={isTacModalOpen}
+        onClose={() => setIsTacModalOpen(false)}
+        onSubmit={handleSaveTacCode}
+        adminTacCode={adminTacCode}
+        setAdminTacCode={setAdminTacCode}
+        savingTacCode={savingTacCode}
+        targetUser={tacTargetUser}
+        selectedUserCount={selectedUserIds.length}
+      />
 
     </div>
   );

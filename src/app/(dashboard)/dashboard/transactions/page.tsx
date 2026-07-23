@@ -1,14 +1,31 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Search, Landmark, Calendar, Filter } from 'lucide-react';
+import { 
+  ArrowRightLeft, 
+  ArrowDownLeft, 
+  ArrowUpRight, 
+  Search, 
+  Landmark, 
+  Filter,
+  X,
+  User,
+  Building,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  FileText
+} from 'lucide-react';
 import { api } from '@/util/api';
+
+import TransactionDetailModal from '@/components/modals/TransactionDetailModal';
 
 export default function UserTransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
+  const [selectedTx, setSelectedTx] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -26,17 +43,33 @@ export default function UserTransactionsPage() {
   }, []);
 
   const filtered = transactions.filter((tx) => {
+    const typeStr = tx.transactionType || tx.type || '';
+    const senderStr = tx.senderName || tx.sender || '';
+    const receiverStr = tx.receiverName || tx.receiver || '';
+    const idStr = tx._id || tx.txHash || '';
+
     const matchesSearch =
-      tx.txHash?.toLowerCase().includes(search.toLowerCase()) ||
-      tx.sender?.toLowerCase().includes(search.toLowerCase()) ||
-      tx.receiver?.toLowerCase().includes(search.toLowerCase()) ||
-      tx.type?.toLowerCase().includes(search.toLowerCase());
+      idStr.toLowerCase().includes(search.toLowerCase()) ||
+      senderStr.toLowerCase().includes(search.toLowerCase()) ||
+      receiverStr.toLowerCase().includes(search.toLowerCase()) ||
+      typeStr.toLowerCase().includes(search.toLowerCase());
     
-    if (filterType === 'ALL') return matchesSearch;
-    if (filterType === 'CREDIT') return matchesSearch && (tx.type === 'Credit' || tx.type === 'Deposit');
-    if (filterType === 'DEBIT') return matchesSearch && (tx.type === 'Debit' || tx.type === 'Transfer');
-    return matchesSearch;
+    if (!matchesSearch) return false;
+    if (filterType === 'ALL') return true;
+    if (filterType === 'CREDIT') return typeStr === 'Credit' || typeStr === 'Deposit';
+    if (filterType === 'DEBIT') return typeStr.includes('Transfer') || typeStr === 'Debit';
+    return true;
   });
+
+  const getFormatDate = (tx: any) => {
+    if (tx.createdAt) return new Date(tx.createdAt).toLocaleString();
+    if (tx.dateCreated) return tx.dateCreated;
+    if (tx.time) {
+      const t = typeof tx.time === 'number' && tx.time < 10000000000 ? tx.time * 1000 : tx.time;
+      return new Date(t).toLocaleString();
+    }
+    return 'N/A';
+  };
 
   return (
     <div className="flex flex-col gap-6 font-sans">
@@ -121,40 +154,47 @@ export default function UserTransactionsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filtered.map((tx: any) => {
-                  const isCredit = tx.type === 'Credit' || tx.type === 'Deposit';
-                  const dateDisplay = tx.createdAt ? new Date(tx.createdAt).toLocaleString() : 'N/A';
+                  const txType = tx.transactionType || tx.type || 'Transfer';
+                  const isCredit = txType === 'Credit' || txType === 'Deposit';
+                  const sender = tx.senderName || tx.sender || 'System Deposit';
+                  const receiver = tx.receiverName || tx.receiver || 'External Account';
+                  const status = tx.status || 'Approved';
 
                   return (
-                    <tr key={tx._id || tx.txHash} className="hover:bg-slate-50/80 transition-colors">
+                    <tr 
+                      key={tx._id || tx.txHash || Math.random()} 
+                      onClick={() => setSelectedTx(tx)}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                    >
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
                           <div className={`p-2 rounded-lg ${isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                             {isCredit ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
                           </div>
-                          <span className="font-bold text-slate-800">{tx.type || 'Transfer'}</span>
+                          <span className="font-bold text-slate-800">{txType}</span>
                         </div>
                       </td>
                       <td className="py-4 px-6 font-mono text-[11px] text-slate-600">
-                        {tx.txHash || tx._id || 'N/A'}
+                        {tx._id || tx.txHash || 'N/A'}
                       </td>
                       <td className="py-4 px-6 text-slate-700 font-medium">
-                        {isCredit ? tx.sender || 'System Deposit' : tx.receiver || 'External Wire'}
+                        {isCredit ? sender : receiver}
                       </td>
                       <td className="py-4 px-6 text-slate-500 font-light text-[11px]">
-                        {dateDisplay}
+                        {getFormatDate(tx)}
                       </td>
                       <td className={`py-4 px-6 text-right font-extrabold text-sm font-mono ${isCredit ? 'text-emerald-600' : 'text-slate-900'}`}>
-                        {isCredit ? '+' : '-'}${Math.abs(tx.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {isCredit ? '+' : '-'}{tx.symbol || '$'}{Math.abs(tx.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-6 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          tx.status === 'Completed' || tx.status === 'Approved' || tx.status === 'Successful'
+                          status === 'Completed' || status === 'Approved' || status === 'Successful'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : tx.status === 'Pending'
+                            : status === 'Pending'
                             ? 'bg-amber-50 text-amber-700 border border-amber-200'
                             : 'bg-red-50 text-red-700 border border-red-200'
                         }`}>
-                          {tx.status || 'Completed'}
+                          {status}
                         </span>
                       </td>
                     </tr>
@@ -165,6 +205,13 @@ export default function UserTransactionsPage() {
           </div>
         )}
       </div>
+
+      {/* Transaction Details Modal Popup */}
+      <TransactionDetailModal 
+        selectedTx={selectedTx} 
+        onClose={() => setSelectedTx(null)} 
+        getFormatDate={getFormatDate} 
+      />
     </div>
   );
 }

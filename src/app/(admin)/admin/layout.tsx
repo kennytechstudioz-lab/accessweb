@@ -18,6 +18,7 @@ import {
   Menu
 } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
+import { useNotificationsStore } from '@/store/notificationsStore';
 import WebSocketListener from '@/components/WebSocketListener';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { message, type, hideToast } = useToastStore();
+  const { notifications, fetchNotifications } = useNotificationsStore();
+
+  useEffect(() => {
+    if (adminUser) {
+      fetchNotifications();
+    }
+  }, [fetchNotifications, adminUser]);
+
+  const unreadCount = notifications.filter((n) => !n.isRead && n.status !== 'read').length;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -260,7 +270,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 title="Notifications"
               >
                 <Bell size={18} />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full animate-ping"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white font-black text-[9px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+                    {unreadCount > 10 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
 
               <Link
