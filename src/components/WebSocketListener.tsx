@@ -71,6 +71,9 @@ export default function WebSocketListener({ role, username }: { role?: string; u
             } else if (data.type === 'KYC_REJECTED') {
               showToast(`⚠️ ${data.title}: ${data.content}`, 'error');
               fetchNotifications();
+            } else if (data.type === 'TRANSFER_DECLINED') {
+              showToast(`❌ ${data.title}: ${data.content}`, 'error');
+              fetchNotifications();
             }
           } catch (e) {
             console.error('Error handling WebSocket message:', e);

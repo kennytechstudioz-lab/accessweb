@@ -6,6 +6,8 @@ import { useTransactionsStore } from '@/store/transactionsStore';
 import { useToastStore } from '@/store/toastStore';
 import { api } from '@/util/api';
 
+import DeclineTransferModal from '@/components/modals/DeclineTransferModal';
+
 export default function TransactionsAdminPage() {
   const { transactions, loading, fetchTransactions } = useTransactionsStore();
   const { showToast } = useToastStore();
@@ -15,6 +17,11 @@ export default function TransactionsAdminPage() {
   
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [submittingDeposit, setSubmittingDeposit] = useState(false);
+
+  // Decline Transfer Modal state
+  const [selectedTxToDecline, setSelectedTxToDecline] = useState<any>(null);
+  const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
+  const [submittingDecline, setSubmittingDecline] = useState(false);
 
   const [depositForm, setDepositForm] = useState({
     username: '',
@@ -27,17 +34,42 @@ export default function TransactionsAdminPage() {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const handleResolveTransaction = async (id: string, statusValue: 'Approved' | 'Failed') => {
+  const handleResolveTransaction = async (id: string, statusValue: 'Approved' | 'Declined') => {
     setActionLoadingId(id);
 
     try {
       await api.put(`/admin/transactions/${id}/resolve`, { status: statusValue });
-      showToast(`Transaction reference ${id} has been ${statusValue === 'Approved' ? 'approved & cleared' : 'rejected'}.`, 'success');
+      showToast(`Transaction reference ${id} has been ${statusValue === 'Approved' ? 'approved & cleared' : 'declined & refunded'}.`, 'success');
       fetchTransactions();
     } catch (err: any) {
       showToast(err.message || 'Error occurred.', 'error');
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  const handleOpenDeclineModal = (tx: any) => {
+    setSelectedTxToDecline(tx);
+    setIsDeclineModalOpen(true);
+  };
+
+  const handleConfirmDecline = async (reason: string) => {
+    if (!selectedTxToDecline) return;
+    setSubmittingDecline(true);
+
+    try {
+      await api.put(`/admin/transactions/${selectedTxToDecline._id}/resolve`, {
+        status: 'Declined',
+        reason,
+      });
+      showToast(`Transfer reference ${selectedTxToDecline._id} has been declined and refunded back to user @${selectedTxToDecline.username}'s account.`, 'success');
+      setIsDeclineModalOpen(false);
+      setSelectedTxToDecline(null);
+      fetchTransactions();
+    } catch (err: any) {
+      showToast(err.message || 'Error declining transaction.', 'error');
+    } finally {
+      setSubmittingDecline(false);
     }
   };
 
@@ -182,9 +214,9 @@ export default function TransactionsAdminPage() {
                             </button>
                             <button
                               disabled={actionLoadingId === tx._id}
-                              onClick={() => handleResolveTransaction(tx._id, 'Failed')}
+                              onClick={() => handleOpenDeclineModal(tx)}
                               className="bg-red-650 hover:bg-red-750 text-white font-bold p-1 rounded transition-all cursor-pointer disabled:bg-slate-100"
-                              title="Reject & Refund"
+                              title="Decline & Refund Account"
                             >
                               <X size={14} />
                             </button>
@@ -305,6 +337,15 @@ export default function TransactionsAdminPage() {
           </div>
         </div>
       )}
+
+      {/* Decline Transfer Modal with optional reason textarea & auto-refund */}
+      <DeclineTransferModal
+        isOpen={isDeclineModalOpen}
+        onClose={() => setIsDeclineModalOpen(false)}
+        onConfirmDecline={handleConfirmDecline}
+        transaction={selectedTxToDecline}
+        submitting={submittingDecline}
+      />
 
     </div>
   );
